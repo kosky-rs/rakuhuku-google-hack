@@ -1,0 +1,45 @@
+name: rakufuku
+description: AI Personal Stylist - Daily outfit recommendations
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # Networking
+  dio: ^5.4.0
+
+  # Image handling
+  image_picker: ^1.0.7
+  cached_network_image: ^3.3.1
+
+  # UI components
+  flutter_svg: ^2.0.9
+  shimmer: ^3.0.0
+
+  # Utilities
+  intl: ^0.18.1
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  riverpod_generator: ^2.3.9
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true

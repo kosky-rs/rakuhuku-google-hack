@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+<!-- Header Image Section / Illustration -->
+<div class="flex-1 flex flex-col justify-center">
+<div class="@container px-6 pt-12">
+<div class="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden rounded-xl min-h-[40vh] shadow-2xl relative group" data-alt="Stylized AI scanning a shopping receipt and clothing" style='background-image: linear-gradient(to bottom, rgba(16, 24, 34, 0) 0%, rgba(16, 24, 34, 0.8) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuDNBYsbc-xV0TEOMjc95Gt60vLLlp7cAlDreE4F7bu3_gxgRpXUrSrnvgttBlY1zm6OlYOWYSSN0o_SCmHLLHg9M0ZXSKAl-lme8SFGD-TS7RRcugPw75nP57p4xTX0xSZSR3-r-vHnWclIdO3QdStLuzd38fAJCL2uz44Tgo4Ag5gK5Hg-wcv7BA-yyGgFt9mXA5q-c7J_JhBOSdhiH9lWP_QNmYs5Dfxj_2-rFsWyrWk8Y1NPuNvL43JFmEJX8Nt4CHaQy5R85axO");'>
+<!-- Overlay Icon for Visual Interest -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-primary/20 backdrop-blur-md p-6 rounded-full border border-primary/30">
+<span class="material-symbols-outlined text-primary text-6xl">photo_camera</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Headline Text -->
+<div class="px-6 pt-10 pb-2">
+<h1 class="text-white tracking-tight text-[32px] font-bold leading-tight text-center">
+                    クローゼット登録を<br/>最小限に。
+                </h1>
+</div>
+<!-- Body Text -->
+<div class="px-8 pb-8">
+<p class="text-gray-400 text-base font-normal leading-relaxed text-center">
+                    撮影するだけで、AIがブランドや色、素材を自動で判別。手入力の手間を省き、あなたのクローゼットを即座にデジタル化します。
+                </p>
+</div>
+</div>
+<!-- Navigation and Progress Section -->
+<div class="pb-12">
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-6">
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+<div class="h-2 w-10 rounded-full bg-primary"></div>
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+</div>
+<!-- Single Button -->
+<div class="flex px-6 py-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 flex-1 bg-primary text-white text-lg font-bold leading-normal tracking-wide shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
+<span class="truncate">次へ進む</span>
+</button>
+</div>
+<!-- Secondary Navigation -->
+<div class="flex justify-center mt-2">
+<button class="text-gray-500 text-sm font-medium px-4 py-2 hover:text-white transition-colors">
+                    スキップ
+                </button>
+</div>
+</div>
+</div>
+</body></html>

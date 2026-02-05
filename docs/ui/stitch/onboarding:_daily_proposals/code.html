@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding - Daily Proposals</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', "Noto Sans JP", sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark antialiased">
+<div class="relative flex h-screen w-full max-w-[430px] mx-auto flex-col bg-white dark:bg-background-dark overflow-hidden shadow-2xl">
+<!-- Progress Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-8">
+<div class="h-1.5 w-8 rounded-full bg-primary/20 dark:bg-primary/10"></div>
+<div class="h-1.5 w-8 rounded-full bg-primary/20 dark:bg-primary/10"></div>
+<div class="h-1.5 w-12 rounded-full bg-primary"></div>
+<div class="h-1.5 w-8 rounded-full bg-primary/20 dark:bg-primary/10"></div>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col items-center justify-center px-6">
+<!-- Headline Text -->
+<h1 class="text-[#111418] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-3">
+                毎朝の提案を受け取る。
+            </h1>
+<!-- Body Text -->
+<p class="text-[#617289] dark:text-gray-400 text-base font-normal leading-normal text-center mb-10">
+                AIがあなたの好みを学習し、<br/>最適なコーディネートを提案します。
+            </p>
+<!-- Visual Interaction Demo (Card with Swipe Overlay) -->
+<div class="relative w-full @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-lg bg-white dark:bg-[#1c2633] border border-gray-100 dark:border-gray-800 overflow-hidden">
+<!-- Outfit Image -->
+<div class="w-full bg-center bg-no-repeat aspect-[4/3] bg-cover" data-alt="Modern minimalist outfit set displayed on a clean background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCgqhKqux3kr_YHZ5gVqSzaLxG4QCHEHAKvnFiyHvmCW5rdFDoQITlmOlkNl7An99AfW0krRKpKg1oV3sJha8NKwafFoNCapnZCjlQ6mn0rxTrRTMAI2589l4_pjb9p2L4x-aprDjNZ-rjfPMzxQ0dZ51tLaSiFZP5uSx66ocoyaapYvVfdOKMTPROwYI4SRtYGe-5H5pKlha68D7SpHLleyzB60cUcd7hZCmwbWJTNI5cl5T3O6g3b70I4wogN7PgPUv6quIrnhzM2");'>
+<!-- Swipe Visual Overlay -->
+<div class="absolute inset-0 flex items-center justify-between px-10 pointer-events-none">
+<div class="bg-white/90 dark:bg-black/50 p-3 rounded-full shadow-md animate-pulse">
+<span class="material-symbols-outlined text-primary text-3xl">chevron_left</span>
+</div>
+<!-- Swiping Hand Indicator -->
+<div class="relative flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-6xl opacity-80 drop-shadow-lg">touch_app</span>
+<div class="w-24 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent mt-2"></div>
+</div>
+<div class="bg-white/90 dark:bg-black/50 p-3 rounded-full shadow-md animate-pulse">
+<span class="material-symbols-outlined text-primary text-3xl">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Card Details -->
+<div class="flex w-full flex-col items-stretch justify-center gap-1 p-5">
+<div class="flex items-center justify-between">
+<p class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">今日のコーディネート</p>
+<span class="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">Style AI</span>
+</div>
+<div class="flex items-end gap-3 justify-between mt-2">
+<div class="flex flex-col gap-0.5">
+<p class="text-[#617289] dark:text-gray-400 text-sm font-medium leading-normal">きれいめカジュアルスタイル</p>
+<p class="text-[#98a2b3] dark:text-gray-500 text-xs font-normal leading-normal">スワイプしてアイテムを変更</p>
+</div>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-medium transition-colors hover:bg-primary/90">
+<span class="material-symbols-outlined text-lg mr-1">sync</span>
+<span class="truncate">Swap</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Hint Text below card -->
+<div class="flex items-center justify-center gap-2 mt-6 text-primary font-medium text-sm">
+<span class="material-symbols-outlined text-base">info</span>
+<span>気に入らないアイテムは横にスワイプ</span>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="flex flex-col px-6 py-8 gap-4">
+<!-- SingleButton Component -->
+<div class="flex">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 flex-1 bg-primary text-white text-lg font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform">
+<span class="truncate">次へ</span>
+</button>
+</div>
+<!-- Skip Option -->
+<button class="text-[#617289] dark:text-gray-400 text-sm font-medium hover:text-primary transition-colors py-2 text-center">
+                説明をスキップ
+            </button>
+</div>
+<!-- Safe area spacing for mobile -->
+<div class="h-4"></div>
+</div>
+</body></html>

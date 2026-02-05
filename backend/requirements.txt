@@ -1,0 +1,22 @@
+# ADK and AI
+google-adk>=0.3.0
+google-cloud-aiplatform>=1.70.0
+google-generativeai>=0.8.0
+google-cloud-vision>=3.7.0
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+
+# Firebase
+firebase-admin>=6.4.0
+
+# External APIs
+httpx>=0.26.0
+python-dotenv>=1.0.0
+
+# Utilities
+pydantic>=2.5.0
+
+# Image Processing
+Pillow>=10.0.0

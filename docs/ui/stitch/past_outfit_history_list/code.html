@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rakufuku - Outfit History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#111418] dark:text-white font-display">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Top App Bar (iOS style) -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 ios-blur px-4 pt-4 pb-2">
+<div class="flex items-center justify-between h-12">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">checkroom</span>
+<h1 class="text-2xl font-bold tracking-tight">History</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[#111418] dark:text-white">search</span>
+</button>
+<button class="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[#111418] dark:text-white">tune</span>
+</button>
+</div>
+</div>
+<!-- Tabs Component -->
+<div class="mt-4">
+<div class="flex border-b border-[#dbe0e6] dark:border-gray-700 px-0 gap-8">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-primary pb-[10px] pt-2" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">All Outfits</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#617289] dark:text-gray-400 pb-[10px] pt-2" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Favorites</p>
+</a>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto">
+<!-- Section: October 2023 -->
+<section class="mb-4">
+<div class="bg-background-light dark:bg-background-dark sticky top-0 z-[5]">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">October 2023</h3>
+</div>
+<div class="space-y-1">
+<!-- History Item 1 -->
+<div class="flex gap-4 bg-white dark:bg-gray-900/40 px-4 py-4 justify-between border-b border-[#f0f2f4] dark:border-gray-800 transition-colors active:bg-gray-100 dark:active:bg-gray-800">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl size-[80px] border border-gray-100 dark:border-gray-800" data-alt="Modern autumn outfit with brown coat and jeans" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBLKrVFNQgMIRatH9h-qopEJmQ0nsLeBInbLL1P6myUYG7A1qNXA3i2E3jjsOw4LTt78gzAS3zD8f3A9u0cmBAuUTPFhla7Q0IOLi4UO4Xt-rkO59fzxcXzCxyoq-bJuEmEDeRjVNoWyf32WTB2OVX7U_QfREkdlm80fAFDH2LYwIj_nI5JBu7gVBYsBOGEpeXjR6UfHk3QShZPgZprn1pIcWC0fB1DFDu9J8oZJJEWbFYoY4gGYtXvhC4xq8F2OFAujrrJIa2Lu-_Y");'>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-[#111418] dark:text-white text-base font-semibold leading-normal">Monday, Oct 24</p>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-green-500 text-[18px]">verified</span>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal">Accepted Outfit</p>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[18px]">wb_sunny</span>
+<p class="text-sm font-medium leading-normal">Sunny • 22°C</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col justify-center shrink-0">
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="flex gap-4 bg-white dark:bg-gray-900/40 px-4 py-4 justify-between border-b border-[#f0f2f4] dark:border-gray-800 transition-colors active:bg-gray-100 dark:active:bg-gray-800">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl size-[80px] border border-gray-100 dark:border-gray-800" data-alt="Casual indoor knitwear and comfortable pants" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA1SDnea1xpBWwcT8An-7RKmenqseDnNVbvSOZgzXOAEAqu6ZjwAFTh4nxeiqhm6O3dSn9GxuXqmuqc1YJyFBG9L-H_vzwXrOnASpQ3vSaBJ3xLqX7lfFLeyLZfji17MxLO_iDh2P4bZEhRYsmo_VnrqtlScGWa5p9D_DFc8tNc4T7Y3BqwS8kV1q4UPoD1qM_8bByQ3WnBRV4poVVyOAu4Nx_aSta3xkCPAsOlFop5kkW75mpf99dPJ5V_4KCWanMv_v_w_PmlFj4C");'>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-[#111418] dark:text-white text-base font-semibold leading-normal">Saturday, Oct 21</p>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-green-500 text-[18px]">verified</span>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal">Accepted Outfit</p>
+</div>
+<div class="flex items-center gap-1.5 text-[#136dec]">
+<span class="material-symbols-outlined text-[18px]">cloud</span>
+<p class="text-sm font-medium leading-normal">Cloudy • 18°C</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col justify-center shrink-0">
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+<!-- History Item 3 -->
+<div class="flex gap-4 bg-white dark:bg-gray-900/40 px-4 py-4 justify-between border-b border-[#f0f2f4] dark:border-gray-800 transition-colors active:bg-gray-100 dark:active:bg-gray-800">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl size-[80px] border border-gray-100 dark:border-gray-800" data-alt="Work professional blazer and trousers set" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDd_o-20o3hGIslUoq6nmiBeRukdj2zkukWYQeeE_mLdyfCSC5JFlRFa0X3OVhcYywwv-SPXudZnF-p7uCdCxE1Q_rjk8Kl_mNkyZrOEcLYlC7B4PUhQLznpO-7yG7Phzw_EkaSUlcGK4KYEPVmfg45aiqSphD7Gp10P8mUxwO9b3TfzddMHN4AoVbrfMk7DGB_gBMLkCzwkUvM_hdn_IKCQ4n0DNh_o0BdxxiYmDCzg6vaBsyrqafEWGjbM2NtXotikjT2CWDoflON");'>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-[#111418] dark:text-white text-base font-semibold leading-normal">Wednesday, Oct 18</p>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-green-500 text-[18px]">verified</span>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal">Accepted Outfit</p>
+</div>
+<div class="flex items-center gap-1.5 text-[#136dec]">
+<span class="material-symbols-outlined text-[18px]">rainy</span>
+<p class="text-sm font-medium leading-normal">Rainy • 15°C</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col justify-center shrink-0">
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: September 2023 -->
+<section class="mb-4 pb-12">
+<div class="bg-background-light dark:bg-background-dark sticky top-0 z-[5]">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">September 2023</h3>
+</div>
+<div class="space-y-1">
+<!-- History Item 4 -->
+<div class="flex gap-4 bg-white dark:bg-gray-900/40 px-4 py-4 justify-between border-b border-[#f0f2f4] dark:border-gray-800 transition-colors active:bg-gray-100 dark:active:bg-gray-800">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl size-[80px] border border-gray-100 dark:border-gray-800" data-alt="Summer lightweight dress and sandals" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA5FLfUZrB5p_GIeXUFutYsChgH7xedTNQzD97Qagcipk48-tOmTBk7pO-AHHtR1AEh-uTbC-4nRv4UWIn6YYwQms7l92TCMqsAHUKR-SG3v2cU6PZqKkOMJTKhgBykAKH1ri2pktxNdDK7FPNIHxFUKpgq2RwZbE660HfmBA0Jqh2ALejsxxZ3ic6gbWz4DbYFUTi4hy7_3MIogiaofmYiZaw6se3b7KlWXI30qlD3HbHDkfDbHDSATtClckdaDWPvP5Pc-z6bTrTW");'>
+</div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-[#111418] dark:text-white text-base font-semibold leading-normal">Friday, Sept 29</p>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-green-500 text-[18px]">verified</span>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal">Accepted Outfit</p>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[18px]">wb_sunny</span>
+<p class="text-sm font-medium leading-normal">Sunny • 26°C</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col justify-center shrink-0">
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation (iOS style) -->
+<nav class="bg-white/80 dark:bg-black/80 ios-blur border-t border-[#dbe0e6] dark:border-gray-800 pb-8 pt-2">
+<div class="flex justify-around items-center">
+<a class="flex flex-col items-center gap-1 text-[#617289] dark:text-gray-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#617289] dark:text-gray-400" href="#">
+<span class="material-symbols-outlined">dresser</span>
+<span class="text-[10px] font-medium">Wardrobe</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="text-[10px] font-medium">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#617289] dark:text-gray-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

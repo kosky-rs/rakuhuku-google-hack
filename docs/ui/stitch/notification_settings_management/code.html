@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Notification Settings - Rakufuku</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#136dec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101822",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex justify-center">
+<div class="relative flex h-full min-h-screen w-full max-w-[430px] flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden shadow-2xl">
+<!-- TopAppBar -->
+<div class="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800">
+<div class="text-[#111418] dark:text-white flex size-12 shrink-0 items-center cursor-pointer">
+<span class="material-symbols-outlined">arrow_back_ios</span>
+</div>
+<h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Notification Settings</h2>
+</div>
+<div class="flex flex-col gap-1 overflow-y-auto pb-24">
+<!-- Section: Daily Suggestions -->
+<div class="mt-4">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Daily Suggestions</h3>
+<div class="flex items-center gap-4 bg-white dark:bg-gray-900 px-4 min-h-[72px] py-2 justify-between">
+<div class="flex flex-col justify-center">
+<p class="text-[#111418] dark:text-white text-base font-medium leading-normal line-clamp-1">Morning Proposal Reminder</p>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">Receive daily outfit suggestions based on your schedule.</p>
+</div>
+<div class="shrink-0">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#f0f2f4] dark:bg-gray-700 p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary">
+<div class="h-full w-[27px] rounded-full bg-white shadow-md"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<!-- Time Picker (Indented/Child of Morning Proposal) -->
+<div class="bg-white dark:bg-gray-900 px-4 pb-6">
+<p class="text-[#617289] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Schedule Time</p>
+<div class="flex px-2 py-1 bg-[#f6f7f8] dark:bg-gray-800 rounded-xl">
+<!-- Hour -->
+<div class="group flex-1">
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center">
+                                06
+                            </p>
+<p class="text-primary dark:text-white text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+                                07
+                            </p>
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center">
+                                08
+                            </p>
+</div>
+<!-- Minute -->
+<div class="group flex-1 border-l border-gray-200 dark:border-gray-700">
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center">
+                                15
+                            </p>
+<p class="text-primary dark:text-white text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+                                30
+                            </p>
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center">
+                                45
+                            </p>
+</div>
+<!-- AM/PM -->
+<div class="group flex-1 border-l border-gray-200 dark:border-gray-700">
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center opacity-0">
+                                --
+                            </p>
+<p class="text-primary dark:text-white text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+                                AM
+                            </p>
+<p class="text-[#bac3ce] dark:text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] flex h-11 items-center justify-center truncate px-4 text-center">
+                                PM
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Weather & Wardrobe -->
+<div class="mt-4">
+<h3 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Weather &amp; Wardrobe</h3>
+<!-- Weather Alert -->
+<div class="flex items-center gap-4 bg-white dark:bg-gray-900 px-4 min-h-[72px] py-2 justify-between border-b border-gray-50 dark:border-gray-800">
+<div class="flex flex-col justify-center">
+<p class="text-[#111418] dark:text-white text-base font-medium leading-normal line-clamp-1">Weather Alerts</p>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">Notifications for sudden weather changes affecting your outfit.</p>
+</div>
+<div class="shrink-0">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#f0f2f4] dark:bg-gray-700 p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary">
+<div class="h-full w-[27px] rounded-full bg-white shadow-md"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<!-- Item Utilization Alerts -->
+<div class="flex items-center gap-4 bg-white dark:bg-gray-900 px-4 min-h-[72px] py-2 justify-between">
+<div class="flex flex-col justify-center">
+<p class="text-[#111418] dark:text-white text-base font-medium leading-normal line-clamp-1">Item Utilization Alerts</p>
+<p class="text-[#617289] dark:text-gray-400 text-sm font-normal leading-normal line-clamp-2">Reminders for clothes you haven't worn in a while.</p>
+</div>
+<div class="shrink-0">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#f0f2f4] dark:bg-gray-700 p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary">
+<div class="h-full w-[27px] rounded-full bg-white shadow-md"></div>
+<input class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+<!-- Info Box -->
+<div class="p-4 mt-4">
+<div class="bg-primary/10 dark:bg-primary/20 rounded-xl p-4 flex gap-3">
+<span class="material-symbols-outlined text-primary">info</span>
+<p class="text-sm text-[#111418] dark:text-gray-200 leading-relaxed">
+                        Rakufuku uses your calendar and local weather data to provide the most accurate outfit recommendations. You can change permissions in iOS Settings.
+                    </p>
+</div>
+</div>
+</div>
+<!-- Navigation Bar (iOS Style) -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 flex justify-around items-center py-3 px-2">
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">checkroom</span>
+<span class="text-[10px] font-medium">Wardrobe</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">auto_fix_high</span>
+<span class="text-[10px] font-medium">Stylist</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</div>
+</div>
+</div>
+</body></html>

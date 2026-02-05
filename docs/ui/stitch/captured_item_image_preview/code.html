@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Captured Item Image Preview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .studio-bg {
+            background: radial-gradient(circle, #ffffff 0%, #f0f2f4 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col max-w-[480px] mx-auto bg-white dark:bg-background-dark overflow-x-hidden shadow-xl">
+<!-- TopAppBar -->
+<div class="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="text-[#111418] dark:text-white flex size-12 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">chevron_left</span>
+</div>
+<h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Item Preview</h2>
+</div>
+<!-- Progress Indicator (Subtle) -->
+<div class="px-4 py-2">
+<div class="flex items-center justify-center gap-2">
+<div class="h-1 w-12 rounded-full bg-primary"></div>
+<div class="h-1 w-12 rounded-full bg-primary/20"></div>
+<div class="h-1 w-12 rounded-full bg-primary/20"></div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="flex flex-col grow">
+<!-- Image Preview Container -->
+<div class="flex w-full grow @container p-4">
+<div class="relative w-full overflow-hidden studio-bg dark:bg-slate-800 aspect-[3/4] rounded-xl flex items-center justify-center border border-gray-100 dark:border-gray-800 shadow-inner">
+<!-- AI Badge -->
+<div class="absolute top-4 right-4 bg-white/90 dark:bg-background-dark/90 backdrop-blur shadow-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-primary text-[18px]">auto_fix_high</span>
+<span class="text-[12px] font-semibold text-[#111418] dark:text-white">AI Processed</span>
+</div>
+<!-- Cropped Item Image -->
+<div class="w-[85%] h-[85%] bg-center bg-no-repeat bg-contain" data-alt="A clean cropped image of a white t-shirt on neutral background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAPn_zUPfhMH6VkNxsx9Ai5s2c50B6wBs3qvG93TkAEZFjmRfkZeECG61vCsI5p5GKi6Eu5cSbNxsWKMtUYeLEe2bd9s4M3OoRkiH5QjjImrIOfG0ULRFaB3KSTpi0IhbMnmSMJK_uJZdk9ia75niRyIL8jeM8vBTlSrhDTtSk-UgYtXHK2rGKg-yHw1hw2jGmDDf5QbxTHjxbtX1Y0S3JZyPCEv9zZLz5QQNr_0yGnnyal7Xg2RojOHt1b2kjc3OnxYUYjJiejziaT");'>
+</div>
+</div>
+</div>
+<!-- Headline and Instructions -->
+<div class="flex flex-col items-center">
+<h3 class="text-[#111418] dark:text-white tracking-tight text-2xl font-bold leading-tight px-4 text-center pb-1 pt-4">Background Removed</h3>
+<p class="text-[#111418]/60 dark:text-white/60 text-sm font-normal leading-normal pb-6 pt-1 px-8 text-center">Looking good? We've isolated your item. Make sure the colors and edges look accurate.</p>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="sticky bottom-0 bg-white dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 px-4 py-6">
+<div class="flex flex-col gap-3 max-w-[480px] mx-auto">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform">
+<span class="truncate">Confirm and Continue</span>
+</button>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-gray-100 dark:bg-gray-800 text-[#111418] dark:text-white text-base font-bold leading-normal tracking-[0.015em] w-full active:scale-[0.98] transition-transform">
+<span class="truncate">Retake Photo</span>
+</button>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-4"></div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rakufuku Splash Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Custom logo styling to integrate R and Hanger */
+        .logo-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo-glow {
+            filter: blur(40px);
+            background: radial-gradient(circle, rgba(19, 109, 236, 0.15) 0%, rgba(19, 109, 236, 0) 70%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark overflow-hidden">
+<div class="relative flex min-h-screen w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark group/design-root">
+<!-- Ambient Background Glow -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] logo-glow"></div>
+</div>
+<!-- Main Logo Composition -->
+<div class="z-10 flex flex-col items-center">
+<div class="relative mb-6">
+<!-- Stylized 'R' + Hanger Logo -->
+<div class="w-24 h-24 flex items-center justify-center bg-background-dark border border-white/10 rounded-xl shadow-2xl">
+<div class="relative flex items-center justify-center">
+<!-- Hanger Icon -->
+<span class="material-symbols-outlined text-primary text-6xl absolute -top-4" style="font-variation-settings: 'wght' 200;">
+                            checkroom
+                        </span>
+<!-- Large 'R' -->
+<span class="text-white text-6xl font-bold tracking-tighter pt-4">R</span>
+</div>
+</div>
+</div>
+<!-- HeadlineText Component Style -->
+<div class="flex flex-col items-center">
+<h1 class="text-white tracking-[0.2em] text-[28px] font-bold leading-tight px-4 text-center uppercase">
+                    Rakufuku
+                </h1>
+<!-- BodyText Component Style -->
+<p class="text-white/40 text-sm font-medium leading-normal pt-2 px-4 text-center tracking-widest uppercase">
+                    AI Personal Stylist
+                </p>
+</div>
+</div>
+<!-- Bottom Loading State / Progress Bar -->
+<div class="absolute bottom-16 w-full max-w-[200px] px-4">
+<!-- ProgressBar Component Style -->
+<div class="flex flex-col gap-3">
+<div class="h-0.5 rounded-full bg-white/10 overflow-hidden">
+<div class="h-full rounded-full bg-primary" style="width: 35%;"></div>
+</div>
+</div>
+</div>
+<!-- Footer / App Info -->
+<div class="absolute bottom-8">
+<p class="text-white/20 text-[10px] uppercase tracking-[0.3em]">Premium Edition</p>
+</div>
+</div>
+<!-- Hidden HeaderImage for Layout Completeness Requirement -->
+<div class="hidden">
+<div class="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-[#111418] rounded-lg min-h-[218px]" data-alt="Minimalist abstract dark silk texture background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWy3Zz_NSLFCJK4Z-D0OPZx7fkBsvfXC1flNkPooGivMPt7TvlrOokUAu2NIwsKZFoaWizZTOIllQoXRA5wrqdoVpjvMYW6TqaRvUnYot8wsI-6ReMVCSFAIw4-sQBMvaAM-QZiFAwLcN67PGIKFOilM-Po5IeR4IYN1iQam9O_54fiPQLAQ7UbeIeXm5TlvGUhPP3Uvh9l3WXosHCRs-K8Vrv2sx9f6DjDneJbZc8ExKKvW8OfTcX1qUwm_JyStsvwVhZMxpzRxhw");'>
+</div>
+</div>
+</body></html>
