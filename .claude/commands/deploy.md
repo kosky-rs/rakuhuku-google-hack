@@ -26,7 +26,7 @@ Where `<target>` is determined by the argument:
 
 ### 3. Post-deploy verification
 After deployment completes:
-- For backend: Run `curl -s https://poltan-api-1024882237054.asia-northeast1.run.app/api/v1/health` and verify `{"status":"healthy"}`
+- For backend: Run `curl -s https://rakufuku-api-1024882237054.asia-northeast1.run.app/api/v1/health` and verify `{"status":"healthy"}`
 - For frontend: Report the hosting URL `https://rakufuku-pwa.web.app`
 
 ### 4. Report results
@@ -35,6 +35,6 @@ Report deployed URLs and health check status to the user.
 ## Environment
 - GCP Project: `rakufuku-pwa`
 - Region: `asia-northeast1`
-- Backend: Cloud Run (`poltan-api`)
+- Backend: Cloud Run (`rakufuku-api`)
 - Frontend: Firebase Hosting (`rakufuku-pwa.web.app`)
 - Deploy script: `deploy.sh` at project root

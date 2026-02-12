@@ -21,7 +21,7 @@ class ApiClient {
     if (envUrl.isNotEmpty) return envUrl;
 
     // 本番URL
-    if (kIsWeb) return 'https://poltan-api-1024882237054.asia-northeast1.run.app/api/v1';
+    if (kIsWeb) return 'https://rakufuku-api-1024882237054.asia-northeast1.run.app/api/v1';
 
     // ローカル開発
     return 'http://localhost:8000/api/v1';

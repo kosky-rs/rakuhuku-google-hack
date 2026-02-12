@@ -13,7 +13,7 @@ set -e
 
 PROJECT_ID="${GCP_PROJECT_ID:?Error: GCP_PROJECT_ID is not set}"
 REGION="asia-northeast1"
-BACKEND_IMAGE="asia-northeast1-docker.pkg.dev/${PROJECT_ID}/poltan-api/poltan:latest"
+BACKEND_IMAGE="asia-northeast1-docker.pkg.dev/${PROJECT_ID}/rakufuku-api/rakufuku:latest"
 
 echo "📋 Project: ${PROJECT_ID}"
 echo "📋 Region: ${REGION}"
@@ -23,10 +23,10 @@ deploy_backend() {
   echo "🚀 === Backend (Cloud Run) デプロイ ==="
 
   # Artifact Registry リポジトリ作成（初回のみ）
-  gcloud artifacts repositories describe poltan-api \
+  gcloud artifacts repositories describe rakufuku-api \
     --project="${PROJECT_ID}" \
     --location="${REGION}" 2>/dev/null || \
-  gcloud artifacts repositories create poltan-api \
+  gcloud artifacts repositories create rakufuku-api \
     --project="${PROJECT_ID}" \
     --repository-format=docker \
     --location="${REGION}" \
@@ -41,7 +41,7 @@ deploy_backend() {
 
   # Cloud Run デプロイ
   echo "🚀 Deploying to Cloud Run..."
-  gcloud run deploy poltan-api \
+  gcloud run deploy rakufuku-api \
     --project="${PROJECT_ID}" \
     --image "${BACKEND_IMAGE}" \
     --region "${REGION}" \
@@ -56,7 +56,7 @@ deploy_backend() {
     --timeout 60
 
   # Cloud Run URL を取得
-  BACKEND_URL=$(gcloud run services describe poltan-api \
+  BACKEND_URL=$(gcloud run services describe rakufuku-api \
     --project="${PROJECT_ID}" \
     --region="${REGION}" \
     --format='value(status.url)')
@@ -71,7 +71,7 @@ deploy_frontend() {
   echo "🚀 === Frontend (Firebase Hosting) デプロイ ==="
 
   # Cloud Run URL を取得
-  BACKEND_URL=$(gcloud run services describe poltan-api \
+  BACKEND_URL=$(gcloud run services describe rakufuku-api \
     --project="${PROJECT_ID}" \
     --region="${REGION}" \
     --format='value(status.url)' 2>/dev/null || echo "")
@@ -79,7 +79,7 @@ deploy_frontend() {
   if [ -z "${BACKEND_URL}" ]; then
     echo "⚠️  Cloud Run URL not found. Deploy backend first or set API_BASE_URL manually."
     echo "   Using placeholder URL..."
-    BACKEND_URL="https://poltan-api-xxxxx-an.a.run.app"
+    BACKEND_URL="https://rakufuku-api-xxxxx-an.a.run.app"
   fi
 
   API_BASE_URL="${BACKEND_URL}/api/v1"
