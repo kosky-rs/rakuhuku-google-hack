@@ -29,8 +29,20 @@ firestore-root/
 │       ├── outfits/                # 提案されたコーディネート履歴
 │       │   └── {outfit_id}/
 │       │
-│       └── feedback/               # フィードバック履歴
-│           └── {feedback_id}/
+│       ├── feedback/               # フィードバック履歴
+│       │   └── {feedback_id}/
+│       │
+│       ├── daily_recommendations/  # 日次コーデ推奨（NEW）
+│       │   └── {date}/             # YYYY-MM-DD形式
+│       │
+│       ├── swipe_history/          # スワイプ履歴（NEW）
+│       │   └── {swipe_id}/
+│       │
+│       ├── preference_profile/     # 学習済み嗜好プロファイル（NEW）
+│       │   └── current             # 常に最新のプロファイル
+│       │
+│       └── tier_usage/             # Tier使用状況（NEW）
+│           └── current             # 現在のTier情報
 │
 ├── style_presets/                  # スタイルプリセット（全ユーザー共通）
 │   └── {preset_id}/
@@ -311,7 +323,148 @@ interface Feedback {
 
 ---
 
-### 3.5 style_presets/{preset_id}
+### 3.5 users/{user_id}/daily_recommendations/{date}
+
+日次コーディネート推奨（マルチエージェント生成）
+
+```typescript
+interface DailyRecommendation {
+  date: string;                    // YYYY-MM-DD形式
+
+  // 推奨コーデ（3つ：クローゼット2 + 外部商品1）
+  recommendations: {
+    outfit_id: string;
+    agent_type: "casual" | "formal" | "balanced" | "unique";
+    items: ClosetItem[];          // アイテム詳細
+    score: number;                // 0-100
+    reasoning: string;            // 提案理由
+    source: "closet" | "external";
+    external_products?: {         // 楽天商品（sourceがexternalの場合）
+      id: string;
+      name: string;
+      price: number;
+      image_url: string;
+      product_url: string;
+      shop_name: string;
+    }[];
+  }[];
+
+  // コンテキスト
+  context: {
+    weather: {
+      temperature: number;
+      condition: string;
+      description: string;
+    };
+    tpo: {
+      formality_required: string;
+      summary: string;
+    };
+    user_preferences: object;     // 嗜好プロファイルのスナップショット
+  };
+
+  // 使用状況
+  generation_count: number;        // 再生成回数
+  tier_limit_reached: boolean;
+
+  // メタ
+  created_at: Timestamp;
+  expires_at: Timestamp;           // 翌日0時
+}
+```
+
+---
+
+### 3.6 users/{user_id}/swipe_history/{swipe_id}
+
+スワイプアクション履歴（承認/拒否）
+
+```typescript
+interface SwipeHistory {
+  outfit_id: string;
+  date: string;                    // YYYY-MM-DD
+  action: "approve" | "reject" | "regenerate";
+  agent_type: string;              // 生成したエージェント
+
+  outfit_details: {
+    items: ClosetItem[];
+    score: number;
+    source: "closet" | "external";
+  };
+
+  timestamp: Timestamp;
+}
+```
+
+---
+
+### 3.7 users/{user_id}/preference_profile/current
+
+学習済みユーザー嗜好プロファイル
+
+```typescript
+interface PreferenceProfile {
+  // スタイルスコア（指数移動平均で学習）
+  style_scores: {
+    casual: number;                // 0-100
+    formal: number;
+    balanced: number;
+    unique: number;
+  };
+
+  // 色嗜好（承認率ベース）
+  color_preferences: {
+    [color: string]: number;       // 0-100
+  };
+
+  // カテゴリ別アイテム嗜好
+  category_preferences: {
+    tops: { [item_id: string]: number };
+    bottoms: { [item_id: string]: number };
+    outerwear: { [item_id: string]: number };
+    shoes: { [item_id: string]: number };
+    accessories: { [item_id: string]: number };
+  };
+
+  // フォーマリティ分布
+  formality_distribution: {
+    casual: number;
+    business_casual: number;
+    formal: number;
+  };
+
+  // 統計
+  total_swipes: number;
+  total_approves: number;
+  approve_rate: number;            // 0.0-1.0
+
+  last_updated: Timestamp;
+}
+```
+
+---
+
+### 3.8 users/{user_id}/tier_usage/current
+
+Tier使用状況
+
+```typescript
+interface TierUsage {
+  tier: "free" | "premium";
+  daily_limit: number;             // Free: 1, Premium: 999
+
+  // 今日の使用状況
+  today_date: string;              // YYYY-MM-DD
+  today_generations: number;
+
+  // リセット時刻
+  reset_at: Timestamp;             // 翌日0時（JST）
+}
+```
+
+---
+
+### 3.9 style_presets/{preset_id}
 
 スタイルプリセット（全ユーザー共通のマスターデータ）
 
@@ -375,6 +528,27 @@ Composite Indexes:
 2. action ASC, created_at DESC
 ```
 
+### 4.4 daily_recommendations
+
+```
+Collection: users/{user_id}/daily_recommendations
+
+Composite Indexes:
+1. date DESC
+2. expires_at ASC
+```
+
+### 4.5 swipe_history
+
+```
+Collection: users/{user_id}/swipe_history
+
+Composite Indexes:
+1. date DESC, action ASC
+2. agent_type ASC, action ASC, timestamp DESC
+3. timestamp DESC
+```
+
 ---
 
 ## 5. セキュリティルール
@@ -399,6 +573,22 @@ service cloud.firestore {
       }
 
       match /feedback/{feedbackId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /daily_recommendations/{date} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /swipe_history/{swipeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /preference_profile/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /tier_usage/{docId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }

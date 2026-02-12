@@ -15,6 +15,12 @@ from agent.tools.calendar import calendar_tool
 from agent.tools.style_advisor import style_advisor_tool
 from agent.tools.outfit_analyzer import outfit_analyzer_tool
 from agent.tools.product_search import product_search_tool
+from agent.integration_helper import (
+    generate_daily_outfits_with_cache,
+    health_check as agent_health_check,
+)
+from agent.tools.recommendation_cache import TierLimitExceeded
+from agent.tools.preference_learner import record_swipe
 
 logger = logging.getLogger(__name__)
 
@@ -102,101 +108,94 @@ async def recommend_outfit(
     authorization: Optional[str] = Header(default=None),
 ):
     """
-    コーディネートを提案する
+    コーディネートを提案する（マルチエージェント版）
+
+    **注意**: このエンドポイントはマルチエージェントシステムを使用するように更新されました。
+    レガシークライアント互換性のため、レスポンス形式は維持されています。
+
+    新しいクライアントは `/outfit/daily` を使用してください。
 
     1. 天気を取得
     2. カレンダーからTPOを判定
-    3. クローゼットから服を取得
+    3. マルチエージェントでコーデ生成
     4. 最適な組み合わせを評価・提案
     """
-    # access_tokenを抽出
-    access_token = None
-    if authorization and authorization.startswith("Bearer "):
-        access_token = authorization[7:]
+    # マルチエージェントシステムで生成
+    try:
+        result = await generate_daily_outfits_with_cache(
+            user_id=request.user_id,
+            latitude=request.latitude,
+            longitude=request.longitude,
+            force_regenerate=False,
+            access_token=authorization[7:] if authorization and authorization.startswith("Bearer ") else None,
+        )
 
-    # 天気取得
-    weather = await weather_tool(
-        latitude=request.latitude,
-        longitude=request.longitude
-    )
+        recommendations = result.get("recommendations", [])
+        weather = result.get("weather", {})
+        tpo = result.get("tpo", {})
 
-    # カレンダーからTPO取得
-    calendar_data = await calendar_tool(
-        user_id=request.user_id,
-        target_date=request.target_date,
-        access_token=access_token,
-    )
-    tpo = calendar_data["tpo"]
+        # レガシー形式に変換
+        if recommendations:
+            # トップ推奨を main recommendation として返す
+            top_rec = recommendations[0]
+            main_recommendation = {
+                "items": top_rec.get("items", []),
+                "score": top_rec.get("score", 0),
+                "feedback": top_rec.get("reasoning", ""),
+            }
 
-    # クローゼットから服を取得
-    formality = tpo["formality_required"]
-    current_season = get_current_season()
+            # 残りを alternatives として返す
+            alternatives = []
+            for alt in recommendations[1:3]:
+                alternatives.append({
+                    "items": alt.get("items", []),
+                    "description": alt.get("reasoning", ""),
+                })
 
-    # 各カテゴリから適切な服を取得
-    tops = await closet_tool(
-        user_id=request.user_id,
-        category="tops",
-        formality=formality,
-        season=current_season
-    )
-    bottoms = await closet_tool(
-        user_id=request.user_id,
-        category="bottoms",
-        formality=formality,
-        season=current_season
-    )
-    outerwear = await closet_tool(
-        user_id=request.user_id,
-        category="outerwear",
-        season=current_season
-    )
-    shoes = await closet_tool(
-        user_id=request.user_id,
-        category="shoes",
-        formality=formality
-    )
+            return {
+                "weather": weather,
+                "tpo": tpo,
+                "recommendation": main_recommendation,
+                "alternatives": alternatives,
+                "evaluation_details": {
+                    "total_score": top_rec.get("score", 0),
+                    "feedback": top_rec.get("reasoning", ""),
+                    "agent_type": top_rec.get("agent_type", "unknown"),
+                    "source": top_rec.get("source", "closet"),
+                },
+                "_multi_agent": True,  # 新システムを使用していることを示すフラグ
+            }
+        else:
+            # フォールバック: 空の推奨を返す
+            return {
+                "weather": weather,
+                "tpo": tpo,
+                "recommendation": {
+                    "items": [],
+                    "score": 0,
+                    "feedback": "推奨が生成できませんでした。クローゼットにアイテムを追加してください。",
+                },
+                "alternatives": [],
+                "evaluation_details": {},
+            }
 
-    # 候補がない場合はフィルタを緩める
-    if not tops:
-        tops = await closet_tool(user_id=request.user_id, category="tops")
-    if not bottoms:
-        bottoms = await closet_tool(user_id=request.user_id, category="bottoms")
-    if not shoes:
-        shoes = await closet_tool(user_id=request.user_id, category="shoes")
-
-    # 最適な組み合わせを選択（最初のアイテムを選択）
-    selected_items = []
-    if tops:
-        selected_items.append(tops[0])
-    if bottoms:
-        selected_items.append(bottoms[0])
-    if weather["temperature"] < 20 and outerwear:
-        selected_items.append(outerwear[0])
-    if shoes:
-        selected_items.append(shoes[0])
-
-    # コーディネートを評価
-    evaluation = await style_advisor_tool(
-        items=selected_items,
-        weather=weather,
-        tpo=tpo,
-        current_season=current_season
-    )
-
-    # 代替案を生成
-    alternatives = generate_alternatives(tops, bottoms, outerwear, shoes, weather, tpo)
-
-    return {
-        "weather": weather,
-        "tpo": tpo,
-        "recommendation": {
-            "items": selected_items,
-            "score": evaluation["total_score"],
-            "feedback": evaluation["feedback"],
-        },
-        "alternatives": alternatives[:2],
-        "evaluation_details": evaluation,
-    }
+    except TierLimitExceeded as e:
+        # Tier制限の場合でも、エラーではなく情報を返す
+        logger.warning(f"Tier limit for legacy endpoint: {e}")
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "本日の推奨生成回数上限に達しました",
+                "upgrade_required": True,
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed in legacy endpoint: {e}")
+        # 旧ロジックにフォールバックせず、エラーを返す
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "推奨生成に失敗しました", "error": str(e)}
+        )
 
 
 def get_current_season() -> str:
@@ -496,3 +495,177 @@ def _estimate_formality(name: str) -> str:
         return "business_casual"
     else:
         return "casual"
+
+
+# ==================== マルチエージェント推奨（NEW） ====================
+
+@router.post("/outfit/daily")
+async def get_daily_outfit_recommendations(
+    request: OutfitRequest,
+    force_regenerate: bool = False,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    日次コーディネート推奨を取得（マルチエージェント方式）
+
+    - 3つの推奨を返す（クローゼット2 + 外部商品1）
+    - キャッシュを使用し、1日1回の生成制限あり
+    - force_regenerate=True で強制再生成（制限回数消費）
+
+    Args:
+        request: OutfitRequest
+        force_regenerate: 強制再生成フラグ
+        authorization: Bearer token
+
+    Returns:
+        {
+            "recommendations": List[dict],  # 3つの推奨
+            "weather": dict,
+            "tpo": dict,
+            "generations_remaining": int,
+            "can_regenerate": bool
+        }
+
+    Raises:
+        HTTPException 429: Tier制限超過
+    """
+    # access_tokenを抽出
+    access_token = None
+    if authorization and authorization.startswith("Bearer "):
+        access_token = authorization[7:]
+
+    try:
+        result = await generate_daily_outfits_with_cache(
+            user_id=request.user_id,
+            latitude=request.latitude,
+            longitude=request.longitude,
+            force_regenerate=force_regenerate,
+            access_token=access_token,
+        )
+
+        logger.info(
+            f"Daily outfits generated for user {request.user_id}, "
+            f"{result['generations_remaining']} generations remaining"
+        )
+
+        return result
+
+    except TierLimitExceeded as e:
+        logger.warning(f"Tier limit exceeded for user {request.user_id}: {e}")
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": str(e),
+                "error_code": "TIER_LIMIT_EXCEEDED",
+                "upgrade_required": True,
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate daily outfits: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "推奨生成に失敗しました", "error": str(e)}
+        )
+
+
+@router.post("/outfit/regenerate")
+async def regenerate_daily_outfits(
+    request: OutfitRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    日次コーディネート推奨を強制再生成
+
+    - 世代カウントを消費して新しい推奨を生成
+    - Tier制限をチェック
+
+    Args:
+        request: OutfitRequest
+        authorization: Bearer token
+
+    Returns:
+        同じ形式で新しい推奨を返す
+
+    Raises:
+        HTTPException 429: Tier制限超過
+    """
+    return await get_daily_outfit_recommendations(
+        request=request,
+        force_regenerate=True,
+        authorization=authorization,
+    )
+
+
+@router.post("/outfit/swipe")
+async def record_outfit_swipe(
+    outfit_id: str,
+    action: str,  # "approve" or "reject"
+    outfit_details: dict,
+    user_id: str = "demo_user",
+):
+    """
+    スワイプアクション（承認/拒否）を記録
+
+    - ユーザー嗜好プロファイルを自動更新
+    - swipe_historyに記録
+
+    Args:
+        outfit_id: Outfit ID
+        action: "approve" または "reject"
+        outfit_details: コーデ詳細（agent_type, items, score, source）
+        user_id: User ID
+
+    Returns:
+        {"message": "記録しました", "action": action}
+    """
+    if action not in ["approve", "reject"]:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Invalid action. Must be 'approve' or 'reject'"}
+        )
+
+    try:
+        await record_swipe(
+            user_id=user_id,
+            outfit_id=outfit_id,
+            action=action,
+            outfit_details=outfit_details,
+        )
+
+        logger.info(f"Recorded {action} swipe for user {user_id}, outfit {outfit_id}")
+
+        return {
+            "message": "スワイプを記録しました",
+            "action": action,
+            "outfit_id": outfit_id,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to record swipe: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "スワイプ記録に失敗しました", "error": str(e)}
+        )
+
+
+@router.get("/agent/health")
+async def multi_agent_health_check():
+    """
+    マルチエージェントシステムのヘルスチェック
+
+    Returns:
+        {
+            "status": "healthy" | "degraded" | "unhealthy",
+            "agents": dict,
+            "tools": dict
+        }
+    """
+    try:
+        health_status = await agent_health_check()
+        return health_status
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }

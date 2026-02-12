@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from firebase_admin import firestore
+from agent.tools.temperature_estimator import add_temperature_ranges_to_items
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +80,12 @@ async def get_closet_items(
         item_data.setdefault("usage_score", 0)
         item_data.setdefault("last_worn_at", None)
         item_data.setdefault("created_at", None)
+        item_data.setdefault("material", None)
 
         items.append(item_data)
+
+    # Enrich items with temperature ranges
+    items = add_temperature_ranges_to_items(items)
 
     return items
 

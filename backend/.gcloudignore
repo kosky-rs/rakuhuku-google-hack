@@ -12,34 +12,20 @@ ENV/
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
 # Testing
 .pytest_cache/
 .coverage
-htmlcov/
-*.log
 
 # OS
 .DS_Store
-Thumbs.db
 
 # Git
 .git/
 .gitignore
-
-# Documentation
-*.md
-docs/
 
 # Environment
 .env.example
 .env.local
 .env.development
 .env.test
-
-# Other
-*.tmp
-*.bak

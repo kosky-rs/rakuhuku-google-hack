@@ -9,6 +9,9 @@ firebase-admin>=6.4.0
 google-cloud-aiplatform>=1.70.0
 google-cloud-vision>=3.7.0
 
+# Agent Development Kit
+google-adk>=0.5.0
+
 # External APIs
 httpx>=0.26.0
 python-dotenv>=1.0.0

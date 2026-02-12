@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/outfit.dart';
 import '../models/closet.dart';
 import '../models/clothing_item.dart';
+import '../models/daily_recommendation.dart' as daily;
 
 /// Token provider function type
 typedef AccessTokenProvider = Future<String?> Function();
@@ -20,7 +21,7 @@ class ApiClient {
     if (envUrl.isNotEmpty) return envUrl;
 
     // 本番URL
-    if (kIsWeb) return 'https://rakufuku-api-1024882237054.asia-northeast1.run.app/api/v1';
+    if (kIsWeb) return 'https://poltan-api-1024882237054.asia-northeast1.run.app/api/v1';
 
     // ローカル開発
     return 'http://localhost:8000/api/v1';
@@ -102,6 +103,63 @@ class ApiClient {
         'longitude': longitude,
       });
       return DailyOutfitProposal.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// 日次コーディネート推奨取得（マルチエージェント版）
+  Future<daily.DailyRecommendation> getDailyOutfits({
+    String userId = 'demo_user',
+    double latitude = 35.6762,
+    double longitude = 139.6503,
+    bool forceRegenerate = false,
+  }) async {
+    try {
+      final response = await _dio.post('/outfit/daily', data: {
+        'user_id': userId,
+        'latitude': latitude,
+        'longitude': longitude,
+        'force_regenerate': forceRegenerate,
+      });
+      return daily.DailyRecommendation.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// 強制再生成（Tier制限あり）
+  Future<daily.DailyRecommendation> regenerateOutfits({
+    String userId = 'demo_user',
+    double latitude = 35.6762,
+    double longitude = 139.6503,
+  }) async {
+    try {
+      final response = await _dio.post('/outfit/regenerate', data: {
+        'user_id': userId,
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+      return daily.DailyRecommendation.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// スワイプアクション記録
+  Future<void> recordSwipe({
+    String userId = 'demo_user',
+    required String outfitId,
+    required String action, // "approve" or "reject"
+    required Map<String, dynamic> outfitDetails,
+  }) async {
+    try {
+      await _dio.post('/outfit/swipe', data: {
+        'user_id': userId,
+        'outfit_id': outfitId,
+        'action': action,
+        'outfit_details': outfitDetails,
+      });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
@@ -303,6 +361,20 @@ class ApiException implements Exception {
     this.data,
   });
 
+  /// Check if this is a tier limit exception
+  bool get isTierLimitExceeded => statusCode == 429;
+
+  /// Get upgrade required flag from response data
+  bool get upgradeRequired {
+    if (data is Map) {
+      final detail = data['detail'];
+      if (detail is Map) {
+        return detail['upgrade_required'] == true;
+      }
+    }
+    return false;
+  }
+
   factory ApiException.fromDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
@@ -324,7 +396,21 @@ class ApiException implements Exception {
         final data = error.response?.data;
         String message;
 
-        if (data is Map && data.containsKey('detail')) {
+        if (statusCode == 429) {
+          // Tier limit exceeded
+          if (data is Map && data.containsKey('detail')) {
+            final detail = data['detail'];
+            if (detail is Map && detail.containsKey('message')) {
+              message = detail['message'].toString();
+            } else if (detail is String) {
+              message = detail;
+            } else {
+              message = '本日の生成回数上限に達しました';
+            }
+          } else {
+            message = '本日の生成回数上限に達しました';
+          }
+        } else if (data is Map && data.containsKey('detail')) {
           message = data['detail'].toString();
         } else if (statusCode == 404) {
           message = 'Resource not found';

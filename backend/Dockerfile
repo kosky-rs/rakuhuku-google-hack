@@ -1,17 +1,33 @@
+# Multi-stage build for smaller image size
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Production stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# 依存関係のインストール
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
 
-# アプリケーションコードをコピー
+# Copy application code
 COPY . .
 
-# ポート設定
-ENV PORT=8080
-EXPOSE 8080
+# Make sure scripts in .local are usable
+ENV PATH=/root/.local/bin:$PATH
 
-# アプリケーション起動
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Run the application
+CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 1

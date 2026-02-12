@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
-import '../providers/outfit_provider.dart';
-import '../widgets/weather_header.dart';
-import '../widgets/outfit_card.dart';
+import '../providers/daily_recommendation_provider.dart';
+import '../widgets/swipeable_outfit_deck.dart';
 
-/// Home screen with daily outfit recommendation
+/// Home screen with daily outfit recommendation (swipe UI)
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,15 +17,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch recommendation on first load
+    // Fetch daily recommendations on first load
     Future.microtask(() {
-      ref.read(outfitProvider.notifier).fetchRecommendation();
+      ref.read(dailyRecommendationProvider.notifier).fetchDailyRecommendations();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final outfitState = ref.watch(outfitProvider);
+    final dailyRecState = ref.watch(dailyRecommendationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -39,53 +38,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             // Content
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => ref.read(outfitProvider.notifier).refresh(),
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: Column(
-                    children: [
-                      // Weather and context section
-                      if (outfitState.proposal != null)
-                        WeatherHeader(
-                          weather: outfitState.proposal!.weather,
-                          tpo: outfitState.proposal!.tpo,
-                        ),
-
-                      // Loading state
-                      if (outfitState.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(48),
-                          child: CircularProgressIndicator(),
-                        ),
-
-                      // Error state
-                      if (outfitState.error != null)
-                        _buildErrorState(outfitState.error!),
-
-                      // Outfit card
-                      if (outfitState.proposal != null && !outfitState.isLoading)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: OutfitCard(
-                            recommendation: outfitState.proposal!.recommendation,
-                            alternatives: outfitState.proposal!.alternatives,
-                            selectedAlternativeIndex:
-                                outfitState.selectedAlternativeIndex,
-                            onSelectMain: () =>
-                                ref.read(outfitProvider.notifier).selectMainOutfit(),
-                            onSelectAlternative: (index) =>
-                                ref.read(outfitProvider.notifier).selectAlternative(index),
-                            onWearOutfit: () => _handleWearOutfit(context),
-                            onRefresh: () =>
-                                ref.read(outfitProvider.notifier).refresh(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              child: _buildContent(context, dailyRecState, isDark),
             ),
           ],
         ),
@@ -94,8 +47,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildAppBar(BuildContext context, bool isDark) {
+    final dailyRecState = ref.watch(dailyRecommendationProvider);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.backgroundDark : Colors.white,
         border: Border(
@@ -115,253 +70,419 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onPressed: () => context.goSettings(),
           ),
 
-          // Title
+          // Title with generation count
           Expanded(
+            child: Column(
+              children: [
+                Text(
+                  'Rakufuku',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                if (dailyRecState.dailyRec != null)
+                  Text(
+                    '残り生成回数: ${dailyRecState.generationsRemaining}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Closet button
+          IconButton(
+            icon: Icon(
+              Icons.checkroom_outlined,
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
+            onPressed: () => context.goCloset(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, DailyRecommendationState state, bool isDark) {
+    // Loading state
+    if (state.isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'AIがあなたにぴったりのコーデを生成中...',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: isDark ? Colors.white70 : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Error state
+    if (state.error != null) {
+      // Tier limit error has special UI
+      if (state.isTierLimited) {
+        return _buildTierLimitedState(state.error!, isDark);
+      }
+      return _buildErrorState(state.error!, isDark);
+    }
+
+    // All rejected state (show regenerate prompt)
+    if (state.allRejected) {
+      return _buildRegeneratePrompt(state, isDark);
+    }
+
+    // Main swipeable deck
+    if (state.recommendations.isNotEmpty) {
+      return Column(
+        children: [
+          // Weather & TPO header
+          if (state.dailyRec != null)
+            _buildContextHeader(state.dailyRec!, isDark),
+
+          // Card counter
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Rakufuku',
-              textAlign: TextAlign.center,
+              '今日のおすすめ (${state.currentCardIndex + 1}/${state.recommendations.length})',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: isDark ? Colors.white : AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // Swipeable deck
+          Expanded(
+            child: SwipeableOutfitDeck(
+              recommendations: state.recommendations,
+              onSwipe: (index, action) => _handleSwipe(index, action, state),
+              onAllRejected: () => _handleAllRejected(),
+            ),
+          ),
+
+          // Swipe instructions
+          _buildSwipeInstructions(isDark),
+        ],
+      );
+    }
+
+    // Empty state
+    return Center(
+      child: Text(
+        'コーデが見つかりませんでした',
+        style: AppTextStyles.bodyLarge.copyWith(
+          color: isDark ? Colors.white70 : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContextHeader(dailyRec, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Weather
+          Row(
+            children: [
+              Icon(
+                _getWeatherIcon(dailyRec.weather.condition),
+                color: AppColors.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${dailyRec.weather.temperature.toStringAsFixed(1)}°C',
+                style: AppTextStyles.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  dailyRec.weather.description,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // TPO
+          Row(
+            children: [
+              Icon(
+                Icons.event_note,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  dailyRec.tpo.summary,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwipeInstructions(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildInstructionItem(
+            Icons.arrow_back,
+            '拒否',
+            Colors.red,
+            isDark,
+          ),
+          _buildInstructionItem(
+            Icons.arrow_forward,
+            '承認',
+            Colors.green,
+            isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionItem(IconData icon, String label, Color color, bool isDark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: isDark ? Colors.white70 : AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRegeneratePrompt(DailyRecommendationState state, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.refresh,
+              size: 64,
+              color: isDark ? Colors.white54 : Colors.grey,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '別のコーデを見ますか？',
               style: AppTextStyles.h3.copyWith(
                 color: isDark ? Colors.white : AppColors.textPrimary,
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-
-          // Calendar button
-          IconButton(
-            icon: Icon(
-              Icons.calendar_today_outlined,
-              color: isDark ? Colors.white : AppColors.textPrimary,
+            const SizedBox(height: 8),
+            Text(
+              '残り生成回数: ${state.generationsRemaining}',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: isDark ? Colors.white70 : AppColors.textSecondary,
+              ),
             ),
-            onPressed: () => _showCalendarEvents(context, isDark),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String error) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: AppColors.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'おすすめを読み込めませんでした',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textPrimary,
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: state.canRegenerate
+                  ? () => ref.read(dailyRecommendationProvider.notifier).regenerate()
+                  : null,
+              icon: const Icon(Icons.refresh),
+              label: const Text('新しいコーデを生成'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => ref.read(outfitProvider.notifier).refresh(),
-            child: const Text('再試行'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showCalendarEvents(BuildContext context, bool isDark) async {
-    final apiClient = ref.read(apiClientProvider);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: apiClient.getCalendar(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return SizedBox(
-                height: 200,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'カレンダー情報を取得できませんでした',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: isDark ? Colors.white70 : AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
+            if (!state.canRegenerate) ...[
+              const SizedBox(height: 16),
+              Text(
+                '本日の生成回数上限に達しました',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.error,
                 ),
-              );
-            }
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-            final data = snapshot.data!;
-            final events = (data['events'] as List?) ?? [];
-            final tpo = data['tpo'] as Map<String, dynamic>? ?? {};
-            final recommendation = tpo['recommendation'] as String? ?? '';
-
-            return Padding(
-              padding: const EdgeInsets.all(20),
+  Widget _buildTierLimitedState(String message, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.block,
+              size: 64,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '本日の生成回数上限に達しました',
+              style: AppTextStyles.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.orange.withOpacity(0.3),
+                ),
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white24 : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Title
                   Text(
-                    '今日の予定',
-                    style: AppTextStyles.h3.copyWith(
-                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    message,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.textSecondary,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // TPO recommendation
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.checkroom,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            recommendation,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-
-                  // Events list
-                  if (events.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: Text(
-                          '予定はありません',
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: isDark ? Colors.white54 : AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    ...events.map((event) {
-                      final e = event as Map<String, dynamic>;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 4,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: _eventTypeColor(e['event_type'] as String? ?? 'other'),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e['title'] as String? ?? '',
-                                    style: AppTextStyles.bodyLarge.copyWith(
-                                      color: isDark ? Colors.white : AppColors.textPrimary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${e['start_time'] ?? ''} - ${e['end_time'] ?? ''}',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: isDark ? Colors.white54 : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  const SizedBox(height: 8),
+                  Text(
+                    'Free tierは1日1回の生成制限があります。\n明日0時にリセットされます。',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: isDark ? Colors.white54 : Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Color _eventTypeColor(String type) {
-    switch (type) {
-      case 'client_meeting':
-        return Colors.red;
-      case 'meeting':
-        return Colors.orange;
-      case 'date':
-        return Colors.pink;
-      case 'exercise':
-        return Colors.green;
-      case 'casual':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Future<void> _handleWearOutfit(BuildContext context) async {
-    final saved = await ref.read(outfitProvider.notifier).saveToHistory();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(saved ? 'コーデを履歴に保存しました！' : '保存に失敗しました'),
-        behavior: SnackBarBehavior.floating,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                // TODO: Navigate to premium upgrade page
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Premium tierは近日公開予定です'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.upgrade),
+              label: const Text('Premium にアップグレード'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  Widget _buildErrorState(String error, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'おすすめを読み込めませんでした',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: isDark ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: isDark ? Colors.white70 : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () =>
+                  ref.read(dailyRecommendationProvider.notifier).fetchDailyRecommendations(),
+              child: const Text('再試行'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getWeatherIcon(String condition) {
+    if (condition.contains('晴')) return Icons.wb_sunny;
+    if (condition.contains('曇')) return Icons.cloud;
+    if (condition.contains('雨')) return Icons.umbrella;
+    if (condition.contains('雪')) return Icons.ac_unit;
+    return Icons.wb_cloudy;
+  }
+
+  void _handleSwipe(int index, String action, DailyRecommendationState state) {
+    final outfit = state.recommendations[index];
+    ref.read(dailyRecommendationProvider.notifier).recordSwipe(
+          outfitId: outfit.id,
+          action: action,
+          outfitDetails: {
+            'items': outfit.items.map((e) => e.toJson()).toList(),
+            'score': outfit.score,
+            'reasoning': outfit.reasoning,
+            'source': outfit.source,
+          },
+        );
+  }
+
+  void _handleAllRejected() {
+    ref.read(dailyRecommendationProvider.notifier).markAllRejected();
+  }
 }

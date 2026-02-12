@@ -28,6 +28,7 @@ dependencies:
   # UI components
   flutter_svg: ^2.0.9
   shimmer: ^3.0.0
+  flutter_card_swiper: ^7.0.0
 
   # Utilities
   intl: ^0.18.1

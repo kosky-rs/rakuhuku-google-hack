@@ -1,8 +1,11 @@
 """Product Search Tool - アフィリエイト商品検索"""
 import logging
 import urllib.parse
-from typing import Optional
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
+
+# Rakuten API統合
+from .rakuten_api import search_rakuten_products, RakutenProduct
 
 # ロガー設定
 logger = logging.getLogger(__name__)
@@ -26,6 +29,7 @@ class ProductSuggestion(BaseModel):
     suggested_style: Optional[str] = Field(default=None, description="提案されるスタイル")
     affiliate_links: list[AffiliateLink] = Field(default_factory=list, description="アフィリエイトリンク")
     price_range: Optional[str] = Field(default=None, description="価格帯目安")
+    actual_products: Optional[list[Dict]] = Field(default=None, description="実際の商品データ（楽天API）")
 
 
 class ProductSearchResult(BaseModel):
@@ -313,5 +317,123 @@ def _estimate_price_range(category: str, style: Optional[str] = None) -> str:
     return base_ranges.get(category, "5,000円〜20,000円")
 
 
+# ==================== 実商品検索（楽天API統合） ====================
+
+async def search_real_products(
+    category: str,
+    color: Optional[str] = None,
+    style: Optional[str] = None,
+    gender: str = "male",
+    max_results: int = 5,
+) -> dict:
+    """
+    楽天APIを使って実際の商品を検索
+
+    Args:
+        category: カテゴリ（tops, bottoms, outerwear, shoes, accessories）
+        color: 色フィルタ
+        style: スタイルフィルタ
+        gender: 性別（male, female）
+        max_results: 最大結果数
+
+    Returns:
+        dict: 商品検索結果
+        {
+            "suggestions": [ProductSuggestion with actual_products, ...],
+            "total_count": int
+        }
+    """
+    # 楽天APIで実商品を検索
+    products = await search_rakuten_products(
+        category=category,
+        color=color,
+        style=style,
+        gender=gender,
+        max_results=max_results,
+    )
+
+    if not products:
+        logger.warning(f"No products found for category={category}, color={color}, style={style}")
+        # フォールバック: アフィリエイトリンクのみ返す
+        return await search_affiliate_products(
+            category=category,
+            color=color,
+            style=style,
+            max_results=max_results,
+        )
+
+    # 検索キーワード構築
+    keywords = []
+    if color:
+        keywords.append(color)
+    if style:
+        keywords.append(style)
+    keywords.append(_get_category_japanese(category))
+
+    # ProductSuggestionを作成
+    suggestion = ProductSuggestion(
+        category=category,
+        suggestion_reason=f"{_get_category_japanese(category)}のおすすめ商品",
+        search_keywords=keywords,
+        suggested_color=color,
+        suggested_style=style,
+        affiliate_links=generate_all_affiliate_links(keywords, category),
+        price_range=_estimate_price_range(category, style),
+        actual_products=products,  # 実商品データを含める
+    )
+
+    return ProductSearchResult(
+        suggestions=[suggestion],
+        total_count=1
+    ).model_dump()
+
+
+async def search_products_with_fallback(
+    improvement_suggestions: list[dict] = None,
+    category: Optional[str] = None,
+    color: Optional[str] = None,
+    style: Optional[str] = None,
+    gender: str = "male",
+    max_results: int = 5,
+    use_real_products: bool = True,
+) -> dict:
+    """
+    商品検索（実商品優先、アフィリエイトリンクにフォールバック）
+
+    Args:
+        improvement_suggestions: OutfitAnalyzerからの改善提案リスト
+        category: カテゴリでフィルタ
+        color: 色でフィルタ
+        style: スタイルでフィルタ
+        gender: 性別
+        max_results: 最大結果数
+        use_real_products: True=楽天API使用、False=アフィリエイトリンクのみ
+
+    Returns:
+        dict: 商品検索結果
+    """
+    if use_real_products and category:
+        try:
+            return await search_real_products(
+                category=category,
+                color=color,
+                style=style,
+                gender=gender,
+                max_results=max_results,
+            )
+        except Exception as e:
+            logger.error(f"Real product search failed, falling back to affiliate links: {e}")
+
+    # フォールバック: アフィリエイトリンクのみ
+    return await search_affiliate_products(
+        improvement_suggestions=improvement_suggestions,
+        category=category,
+        color=color,
+        style=style,
+        max_results=max_results,
+    )
+
+
 # ADK Tool として公開
 product_search_tool = search_affiliate_products
+rakuten_product_search_tool = search_real_products
