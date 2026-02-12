@@ -2,10 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
 import '../../../core/models/clothing_item.dart';
 import '../../../core/models/closet.dart';
+import '../../../core/services/storage_service.dart';
+import '../../home/providers/outfit_provider.dart' show currentUserIdProvider;
 import '../providers/closet_provider.dart';
 
 /// Add item form screen
@@ -278,13 +281,22 @@ class _AddItemFormScreenState extends ConsumerState<AddItemFormScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // Upload image to Firebase Storage if image path exists
+      String? uploadedImageUrl;
+      if (widget.imagePath != null) {
+        final userId = ref.read(currentUserIdProvider);
+        uploadedImageUrl = await ref
+            .read(storageServiceProvider)
+            .uploadClothingImage(widget.imagePath!, userId);
+      }
+
       final request = CreateClothingItemRequest(
         name: _nameController.text.trim(),
         category: _selectedCategory.value,
         color: _selectedColor.toLowerCase(),
         season: _selectedSeasons.map((s) => s.value).toList(),
         formality: _selectedFormality.value,
-        imageUrl: widget.imagePath,
+        imageUrl: uploadedImageUrl,
       );
 
       await ref.read(closetProvider.notifier).addItem(request);
@@ -297,6 +309,16 @@ class _AddItemFormScreenState extends ConsumerState<AddItemFormScreen> {
           ),
         );
         context.go(AppRoutes.closet);
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('画像のアップロードに失敗しました: ${e.message}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
