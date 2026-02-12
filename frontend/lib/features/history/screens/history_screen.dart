@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
 import '../providers/history_provider.dart';
@@ -13,9 +15,13 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  late DateTime _focusedDay;
+  DateTime? _selectedDay;
+
   @override
   void initState() {
     super.initState();
+    _focusedDay = DateTime.now();
     Future.microtask(() {
       ref.read(historyProvider.notifier).fetchHistory();
     });
@@ -135,16 +141,192 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       );
     }
 
-    // Data
+    // Calendar view
     return RefreshIndicator(
       onRefresh: () => ref.read(historyProvider.notifier).refresh(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: state.entries.length,
-        itemBuilder: (context, index) {
-          return _HistoryEntryCard(entry: state.entries[index]);
-        },
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Calendar
+            Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                ),
+              ),
+              child: TableCalendar(
+                firstDay: DateTime.utc(2024, 1, 1),
+                lastDay: DateTime.now(),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                eventLoader: (day) => _getEventsForDay(day, state.entries),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                calendarStyle: CalendarStyle(
+                  // Selected day
+                  selectedDecoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  selectedTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  // Today
+                  todayDecoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  todayTextStyle: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  // Marker (events)
+                  markerDecoration: BoxDecoration(
+                    color: AppColors.secondary,
+                    shape: BoxShape.circle,
+                  ),
+                  markerSize: 6,
+                  markersMaxCount: 1,
+                  // Default days
+                  defaultTextStyle: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                  weekendTextStyle: TextStyle(
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  ),
+                  outsideTextStyle: TextStyle(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                headerStyle: HeaderStyle(
+                  titleTextStyle: AppTextStyles.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  leftChevronIcon: Icon(
+                    Icons.chevron_left,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                  rightChevronIcon: Icon(
+                    Icons.chevron_right,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  weekendStyle: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+
+            // Selected day outfits
+            if (_selectedDay != null)
+              _buildOutfitsForDay(_selectedDay!, state, isDark),
+          ],
+        ),
       ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getEventsForDay(
+    DateTime day,
+    List<Map<String, dynamic>> entries,
+  ) {
+    final dateKey = DateFormat('yyyy-MM-dd').format(day);
+    return entries.where((e) => e['worn_date'] == dateKey).toList();
+  }
+
+  Widget _buildOutfitsForDay(
+    DateTime day,
+    HistoryState state,
+    bool isDark,
+  ) {
+    final outfits = _getEventsForDay(day, state.entries);
+
+    if (outfits.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.event_busy_outlined,
+                size: 48,
+                color: AppColors.textMuted,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                DateFormat('M月d日').format(day),
+                style: AppTextStyles.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'この日のコーデ履歴はありません',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                DateFormat('M月d日のコーデ').format(day),
+                style: AppTextStyles.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Outfit cards
+        ...outfits.map((outfit) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: _HistoryEntryCard(entry: outfit),
+            )),
+
+        const SizedBox(height: 16),
+      ],
     );
   }
 }
