@@ -198,6 +198,37 @@ class DailyRecommendationNotifier
     }
   }
 
+  /// Select outfit as today's choice (from vertical swipe up)
+  ///
+  /// This is triggered when user swipes up on an outfit card.
+  /// Automatically records the approval and saves to history.
+  Future<void> selectAsToday({
+    required int index,
+    required OutfitRecommendation outfit,
+  }) async {
+    try {
+      // Record the swipe as approval
+      await recordSwipe(
+        outfitId: outfit.id,
+        action: 'approve',
+        outfitDetails: {
+          'items': outfit.items.map((e) => e.toJson()).toList(),
+          'score': outfit.score,
+          'reasoning': outfit.reasoning,
+          'source': outfit.source,
+          'agent_type': outfit.agentType,
+        },
+      );
+
+      // Update state - mark as selected
+      state = state.copyWith(
+        allRejected: false,
+      );
+    } catch (e) {
+      // Silent fail - user already saw celebration dialog
+    }
+  }
+
   /// Mark all as rejected (show regenerate prompt)
   void markAllRejected() {
     state = state.copyWith(allRejected: true);

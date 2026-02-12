@@ -29,6 +29,8 @@ dependencies:
   flutter_svg: ^2.0.9
   shimmer: ^3.0.0
   flutter_card_swiper: ^7.0.0
+  confetti: ^0.7.0
+  table_calendar: ^3.0.9
 
   # Utilities
   intl: ^0.18.1

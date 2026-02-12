@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
 import '../providers/daily_recommendation_provider.dart';
-import '../widgets/swipeable_outfit_deck.dart';
+import '../widgets/horizontal_outfit_browser.dart';
 
 /// Home screen with daily outfit recommendation (swipe UI)
 class HomeScreen extends ConsumerStatefulWidget {
@@ -67,7 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Icons.account_circle_outlined,
               color: isDark ? Colors.white : AppColors.textPrimary,
             ),
-            onPressed: () => context.goSettings(),
+            onPressed: () => context.goProfileView(),
           ),
 
           // Title with generation count
@@ -92,13 +92,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // Closet button
+          // Calendar button
           IconButton(
             icon: Icon(
-              Icons.checkroom_outlined,
+              Icons.calendar_month,
               color: isDark ? Colors.white : AppColors.textPrimary,
             ),
-            onPressed: () => context.goCloset(),
+            onPressed: () => _showCalendarDialog(context, dailyRecState),
           ),
         ],
       ),
@@ -147,29 +147,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (state.dailyRec != null)
             _buildContextHeader(state.dailyRec!, isDark),
 
-          // Card counter
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              '今日のおすすめ (${state.currentCardIndex + 1}/${state.recommendations.length})',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: isDark ? Colors.white : AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-
-          // Swipeable deck
+          // Horizontal browser with vertical swipe
           Expanded(
-            child: SwipeableOutfitDeck(
+            child: HorizontalOutfitBrowser(
               recommendations: state.recommendations,
-              onSwipe: (index, action) => _handleSwipe(index, action, state),
-              onAllRejected: () => _handleAllRejected(),
+              onSelectAsToday: (index, outfit) {
+                ref.read(dailyRecommendationProvider.notifier).selectAsToday(
+                  index: index,
+                  outfit: outfit,
+                );
+              },
+              onSkip: (index) {
+                // Skip handler - just logs the skip action
+              },
             ),
           ),
 
-          // Swipe instructions
-          _buildSwipeInstructions(isDark),
+          // Updated swipe instructions
+          _buildNewSwipeInstructions(isDark),
         ],
       );
     }
@@ -249,21 +244,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildSwipeInstructions(bool isDark) {
-    return Padding(
+  Widget _buildNewSwipeInstructions(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildInstructionItem(
-            Icons.arrow_back,
-            '拒否',
-            Colors.red,
+            Icons.swipe,
+            '横スクロール: 閲覧',
+            AppColors.primary,
             isDark,
           ),
           _buildInstructionItem(
-            Icons.arrow_forward,
-            '承認',
+            Icons.arrow_upward,
+            '上スワイプ: 決定',
             Colors.green,
             isDark,
           ),
@@ -484,5 +487,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _handleAllRejected() {
     ref.read(dailyRecommendationProvider.notifier).markAllRejected();
+  }
+
+  void _showCalendarDialog(BuildContext context, DailyRecommendationState state) {
+    final tpo = state.dailyRec?.tpo;
+    if (tpo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('予定情報を取得できませんでした')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.calendar_month, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('今日の予定'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tpo.summary,
+              style: AppTextStyles.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '推奨: ${tpo.formalityRequired == "casual" ? "カジュアル" : tpo.formalityRequired == "formal" ? "フォーマル" : "ビジネスカジュアル"}',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 from agent.adk_config import get_agent_config
 from agent.tools.closet import get_closet_items
-from agent.tools.rakuten_api import search_rakuten_products
+from agent.tools.rakuten_api import search_rakuten_products, supplement_outfit_with_rakuten
 
 logger = logging.getLogger(__name__)
 
@@ -195,29 +195,108 @@ class BaseStyleAgent:
         tpo: Dict,
         score: float,
     ) -> str:
-        """Generate reasoning for outfit recommendation"""
+        """
+        Generate detailed reasoning for outfit recommendation
+
+        Enhanced with:
+        - Temperature-specific context
+        - TPO mapping with detailed descriptions
+        - Trend color detection
+        - Weather condition considerations
+        """
         temp = weather.get("temperature", 20)
         formality = tpo.get("formality_required", "casual")
+        condition = weather.get("condition", "晴れ")
 
-        reasoning = f"{self.agent_type.capitalize()}スタイルの提案（スコア: {score:.1f}）。"
+        # Detect trend colors in the outfit
+        colors = [item.get("color") for item in items if item.get("color")]
+        trend_colors = self._detect_trend_colors(colors)
 
-        # Weather reasoning
-        if temp < 15:
-            reasoning += f"気温{temp}℃に対応した暖かいコーディネート。"
-        elif temp > 25:
-            reasoning += f"気温{temp}℃に対応した涼しいコーディネート。"
+        reasoning_parts = []
+
+        # 1. Agent type and AI score
+        reasoning_parts.append(
+            f"{self.agent_type.capitalize()}スタイル（AIスコア: {score:.1f}/100）"
+        )
+
+        # 2. Temperature context (more detailed)
+        if temp < 10:
+            reasoning_parts.append(f"極寒の{temp}°Cに対応した防寒重視コーデ")
+        elif temp < 15:
+            reasoning_parts.append(f"肌寒い{temp}°Cに最適なレイヤードスタイル")
+        elif temp < 20:
+            reasoning_parts.append(f"過ごしやすい{temp}°Cに合わせた快適スタイル")
+        elif temp < 25:
+            reasoning_parts.append(f"春らしい{temp}°Cで軽やかな印象のコーデ")
         else:
-            reasoning += f"気温{temp}℃に適した快適なコーディネート。"
+            reasoning_parts.append(f"暑い{temp}°Cでも快適な通気性重視コーデ")
 
-        # TPO reasoning
-        if formality == "formal":
-            reasoning += "フォーマルな場に相応しい装い。"
-        elif formality == "business_casual":
-            reasoning += "ビジネスカジュアルに適した装い。"
-        else:
-            reasoning += "カジュアルで動きやすい装い。"
+        # 3. TPO context (detailed mapping)
+        tpo_map = {
+            'formal': 'フォーマルな場に相応しいエレガントな装い',
+            'business_casual': 'ビジネスシーンで好印象を与える洗練スタイル',
+            'casual': 'リラックスした雰囲気の動きやすいコーデ',
+        }
+        reasoning_parts.append(tpo_map.get(formality, 'バランスの取れた装い'))
 
-        return reasoning
+        # 4. Trend colors (if detected)
+        if trend_colors:
+            reasoning_parts.append(
+                f"今季トレンドの{', '.join(trend_colors)}を取り入れた旬な配色"
+            )
+
+        # 5. Weather condition special notes
+        if condition.lower() in ['rain', '雨']:
+            reasoning_parts.append("雨天に配慮した撥水素材推奨")
+        elif condition.lower() in ['snow', '雪']:
+            reasoning_parts.append("雪の日に対応した防水・防寒仕様")
+
+        return '。'.join(reasoning_parts) + '。'
+
+    def _detect_trend_colors(self, colors: List[str]) -> List[str]:
+        """
+        Detect 2026 trend colors in the outfit
+
+        2026 Trend Colors:
+        - ベージュ (Beige) - Earth tones
+        - アースカラー (Earth colors) - Natural tones
+        - グリーン (Green) - Nature-inspired
+        - ラベンダー (Lavender) - Soft purple
+        - テラコッタ (Terracotta) - Warm clay tones
+
+        Args:
+            colors: List of color names from items
+
+        Returns:
+            list: Detected trend colors (max 2)
+        """
+        trend_colors_2026 = {
+            'ベージュ': ['beige', 'ベージュ', 'タン'],
+            'アースカラー': ['earth', 'アース', 'ブラウン', 'brown', 'カーキ', 'khaki'],
+            'グリーン': ['green', 'グリーン', '緑', 'オリーブ', 'olive'],
+            'ラベンダー': ['lavender', 'ラベンダー', 'purple', 'パープル', '紫'],
+            'テラコッタ': ['terracotta', 'テラコッタ', 'オレンジ', 'orange'],
+        }
+
+        detected = []
+
+        for color_input in colors:
+            if not color_input:
+                continue
+
+            color_lower = color_input.lower()
+
+            for trend_name, keywords in trend_colors_2026.items():
+                # Check if any keyword matches
+                if any(keyword.lower() in color_lower for keyword in keywords):
+                    if trend_name not in detected:
+                        detected.append(trend_name)
+
+            # Stop after finding 2 trend colors
+            if len(detected) >= 2:
+                break
+
+        return detected
 
 
 # ==================== カジュアルエージェント ====================
@@ -235,7 +314,7 @@ class CasualStyleAgent(BaseStyleAgent):
         )
 
     async def generate_outfit(self, user_id: str, context: Dict) -> Dict:
-        """Generate casual outfit from closet"""
+        """Generate casual outfit from closet with Rakuten supplementation"""
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
@@ -256,20 +335,41 @@ class CasualStyleAgent(BaseStyleAgent):
         if not selected_items:
             return self._empty_outfit()
 
-        # Score the outfit
-        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
-
-        # Generate reasoning
-        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
-
-        return {
+        # Create initial outfit
+        outfit = {
             "outfit_id": str(uuid.uuid4()),
             "agent_type": self.agent_type,
             "items": selected_items,
-            "score": score,
-            "reasoning": reasoning,
+            "score": 0,
+            "reasoning": "",
             "source": "closet",
         }
+
+        # Detect missing categories and supplement with Rakuten
+        required_categories = ["tops", "bottoms", "shoes"]
+        present_categories = [item.get("category") for item in selected_items]
+        missing_categories = [cat for cat in required_categories if cat not in present_categories]
+
+        if missing_categories:
+            gender = user_preferences.get("gender", "male")
+            outfit = await supplement_outfit_with_rakuten(
+                outfit,
+                missing_categories,
+                weather,
+                gender,
+            )
+            # Update items list with supplemented products
+            selected_items = outfit["items"]
+
+        # Score the outfit
+        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
+        outfit["score"] = score
+
+        # Generate reasoning
+        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
+        outfit["reasoning"] = reasoning
+
+        return outfit
 
     def _select_items_by_category(self, items: List[Dict]) -> List[Dict]:
         """Select one item from each category"""
@@ -311,7 +411,7 @@ class FormalStyleAgent(BaseStyleAgent):
         )
 
     async def generate_outfit(self, user_id: str, context: Dict) -> Dict:
-        """Generate formal outfit from closet"""
+        """Generate formal outfit from closet with Rakuten supplementation"""
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
@@ -338,17 +438,40 @@ class FormalStyleAgent(BaseStyleAgent):
         if not selected_items:
             return self._empty_outfit()
 
-        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
-        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
-
-        return {
+        # Create initial outfit
+        outfit = {
             "outfit_id": str(uuid.uuid4()),
             "agent_type": self.agent_type,
             "items": selected_items,
-            "score": score,
-            "reasoning": reasoning,
+            "score": 0,
+            "reasoning": "",
             "source": "closet",
         }
+
+        # Detect missing categories and supplement with Rakuten
+        required_categories = ["tops", "bottoms", "outerwear", "shoes"]
+        present_categories = [item.get("category") for item in selected_items]
+        missing_categories = [cat for cat in required_categories if cat not in present_categories]
+
+        if missing_categories:
+            gender = user_preferences.get("gender", "male")
+            outfit = await supplement_outfit_with_rakuten(
+                outfit,
+                missing_categories,
+                weather,
+                gender,
+            )
+            selected_items = outfit["items"]
+
+        # Score the outfit
+        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
+        outfit["score"] = score
+
+        # Generate reasoning
+        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
+        outfit["reasoning"] = reasoning
+
+        return outfit
 
     def _select_items_by_category(self, items: List[Dict]) -> List[Dict]:
         """Select formal items by category"""
@@ -388,7 +511,7 @@ class BalancedStyleAgent(BaseStyleAgent):
         )
 
     async def generate_outfit(self, user_id: str, context: Dict) -> Dict:
-        """Generate balanced outfit from closet"""
+        """Generate balanced outfit from closet with Rakuten supplementation"""
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
@@ -414,17 +537,40 @@ class BalancedStyleAgent(BaseStyleAgent):
         if not selected_items:
             return self._empty_outfit()
 
-        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
-        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
-
-        return {
+        # Create initial outfit
+        outfit = {
             "outfit_id": str(uuid.uuid4()),
             "agent_type": self.agent_type,
             "items": selected_items,
-            "score": score,
-            "reasoning": reasoning,
+            "score": 0,
+            "reasoning": "",
             "source": "closet",
         }
+
+        # Detect missing categories and supplement with Rakuten
+        required_categories = ["tops", "bottoms", "shoes"]
+        present_categories = [item.get("category") for item in selected_items]
+        missing_categories = [cat for cat in required_categories if cat not in present_categories]
+
+        if missing_categories:
+            gender = user_preferences.get("gender", "male")
+            outfit = await supplement_outfit_with_rakuten(
+                outfit,
+                missing_categories,
+                weather,
+                gender,
+            )
+            selected_items = outfit["items"]
+
+        # Score the outfit
+        score = self._score_outfit(selected_items, weather, tpo, user_preferences)
+        outfit["score"] = score
+
+        # Generate reasoning
+        reasoning = self._generate_reasoning(selected_items, weather, tpo, score)
+        outfit["reasoning"] = reasoning
+
+        return outfit
 
     def _select_items_by_category(self, items: List[Dict]) -> List[Dict]:
         """Select balanced items"""

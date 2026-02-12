@@ -45,11 +45,12 @@ class OutfitOrchestrator:
         user_preferences: Dict,
     ) -> List[Dict]:
         """
-        Generate 3 daily outfit recommendations
+        Generate 5 daily outfit recommendations
 
         Strategy:
-        - 2 from closet (top-scored from Casual/Formal/Balanced agents)
-        - 1 from external products (Unique agent)
+        - Ensure at least 1 recommendation from each agent type (diversity guarantee)
+        - Fill remaining slots with highest-scored recommendations
+        - Total of 5 recommendations
 
         Args:
             user_id: User ID
@@ -58,7 +59,7 @@ class OutfitOrchestrator:
             user_preferences: User preference profile
 
         Returns:
-            list: Top 3 outfit recommendations (sorted by score)
+            list: Top 5 outfit recommendations (sorted by score)
         """
         context = {
             "weather": weather,
@@ -96,12 +97,12 @@ class OutfitOrchestrator:
 
         logger.info(f"Generated {len(valid_results)} outfits from agents")
 
-        # Rank and select top 3
-        top_3 = self._select_top_recommendations(valid_results, user_preferences, tpo, weather)
+        # Rank and select top 5 with agent diversity guarantee
+        top_5 = self._select_top_recommendations(valid_results, user_preferences, tpo, weather)
 
-        logger.info(f"Selected top 3 recommendations with scores: {[r['score'] for r in top_3]}")
+        logger.info(f"Selected top 5 recommendations with scores: {[r['score'] for r in top_5]}")
 
-        return top_3
+        return top_5
 
     def _select_top_recommendations(
         self,
@@ -111,7 +112,12 @@ class OutfitOrchestrator:
         weather: Dict,
     ) -> List[Dict]:
         """
-        Select top 3 recommendations: 2 closet + 1 external
+        Select top 5 recommendations with agent diversity guarantee
+
+        Strategy:
+        - Ensure at least 1 from each agent type (diversity guarantee)
+        - Fill remaining slots with highest-scored recommendations
+        - Return 5 total recommendations
 
         Args:
             outfits: All generated outfits
@@ -120,41 +126,57 @@ class OutfitOrchestrator:
             weather: Weather context
 
         Returns:
-            list: Top 3 outfits
+            list: Top 5 outfits with agent diversity
         """
-        # Separate closet and external outfits
-        closet_outfits = [o for o in outfits if o.get("source") == "closet" and o.get("score", 0) > 0]
-        external_outfits = [o for o in outfits if o.get("source") == "external" and o.get("score", 0) > 0]
+        # Re-score all outfits with context weights
+        for outfit in outfits:
+            if outfit.get("score", 0) > 0:
+                outfit["final_score"] = self._calculate_final_score(outfit, user_preferences, tpo, weather)
+            else:
+                outfit["final_score"] = 0
 
-        # Re-score with context weights
-        for outfit in closet_outfits:
-            outfit["final_score"] = self._calculate_final_score(outfit, user_preferences, tpo, weather)
+        # Ensure agent diversity - select at least 1 from each agent type
+        guaranteed = self._ensure_agent_diversity(outfits)
 
-        for outfit in external_outfits:
-            outfit["final_score"] = self._calculate_final_score(outfit, user_preferences, tpo, weather)
+        # Get remaining outfits (not in guaranteed list)
+        guaranteed_ids = {o["outfit_id"] for o in guaranteed}
+        remaining = [o for o in outfits if o["outfit_id"] not in guaranteed_ids and o["final_score"] > 0]
 
-        # Sort by final score
-        closet_outfits.sort(key=lambda x: x["final_score"], reverse=True)
-        external_outfits.sort(key=lambda x: x["final_score"], reverse=True)
+        # Sort remaining by score
+        remaining.sort(key=lambda x: x["final_score"], reverse=True)
 
-        # Select top 2 from closet
-        top_closet = closet_outfits[:2]
+        # Combine: guaranteed + top remaining to reach 5 total
+        selected = guaranteed + remaining
+        selected = selected[:5]
 
-        # Select top 1 from external
-        top_external = external_outfits[:1] if external_outfits else []
-
-        # Combine and ensure we have 3
-        selected = top_closet + top_external
-
-        # If we don't have 3, fill with remaining closet outfits
-        if len(selected) < 3 and len(closet_outfits) > 2:
-            remaining_closet = closet_outfits[2:]
-            selected.extend(remaining_closet[: 3 - len(selected)])
-
-        # Sort final selection by score (highest first)
+        # Final sort by score (highest first)
         selected.sort(key=lambda x: x["final_score"], reverse=True)
 
-        return selected[:3]
+        return selected
+
+    def _ensure_agent_diversity(self, outfits: List[Dict]) -> List[Dict]:
+        """
+        Ensure at least one recommendation from each agent type
+
+        Args:
+            outfits: All generated outfits
+
+        Returns:
+            list: One outfit from each agent type (up to 4)
+        """
+        agent_types = ['casual', 'formal', 'balanced', 'unique']
+        guaranteed = []
+
+        for agent_type in agent_types:
+            # Find all outfits from this agent type
+            candidates = [o for o in outfits if o.get('agent_type') == agent_type and o.get('final_score', 0) > 0]
+
+            if candidates:
+                # Pick the highest scored one from this agent
+                best = max(candidates, key=lambda x: x.get('final_score', 0))
+                guaranteed.append(best)
+
+        return guaranteed
 
     def _calculate_final_score(
         self,

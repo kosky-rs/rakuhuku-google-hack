@@ -251,6 +251,65 @@ def _get_category_japanese(category: str) -> str:
     return category_map.get(category, "ファッション")
 
 
+async def supplement_outfit_with_rakuten(
+    outfit: Dict,
+    missing_categories: List[str],
+    weather: Dict,
+    gender: str = "male",
+) -> Dict:
+    """
+    Supplement outfit with Rakuten products for missing categories
+
+    When closet lacks certain category items, this function searches
+    Rakuten for suitable products to complete the outfit.
+
+    Args:
+        outfit: Existing outfit dictionary
+        missing_categories: List of missing categories (e.g., ['shoes', 'tops'])
+        weather: Weather context for appropriate selection
+        gender: Gender for product filtering (male/female)
+
+    Returns:
+        Dict: Updated outfit with external products supplemented
+    """
+    if not missing_categories:
+        return outfit
+
+    logger.info(f"Supplementing outfit with Rakuten for missing categories: {missing_categories}")
+
+    # Initialize external_products list if not exists
+    if 'external_products' not in outfit:
+        outfit['external_products'] = []
+
+    # Determine base style for consistent recommendations
+    base_style = "ベーシック"  # Default to basic style for consistency
+
+    # Search for each missing category
+    for category in missing_categories:
+        try:
+            products = await search_rakuten_products(
+                category=category,
+                style=base_style,
+                gender=gender,
+                max_results=1,  # Take only the best match
+            )
+
+            if products:
+                # Add the product to external products
+                outfit['external_products'].append(products[0])
+                logger.info(f"Added Rakuten product for {category}: {products[0].get('name', 'N/A')}")
+
+        except Exception as e:
+            logger.error(f"Failed to supplement category {category}: {e}")
+            continue
+
+    # Update source to hybrid if we added external products
+    if outfit['external_products']:
+        outfit['source'] = 'hybrid'  # closet + external
+
+    return outfit
+
+
 # ==================== ツール関数 ====================
 
 # ADK Tool として公開
