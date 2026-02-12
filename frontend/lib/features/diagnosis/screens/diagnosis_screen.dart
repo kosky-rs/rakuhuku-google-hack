@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +8,9 @@ import '../providers/diagnosis_provider.dart';
 
 /// Diagnosis screen for capturing full outfit photo
 class DiagnosisScreen extends ConsumerStatefulWidget {
-  const DiagnosisScreen({super.key});
+  final Map<String, dynamic>? initialImageData;
+
+  const DiagnosisScreen({super.key, this.initialImageData});
 
   @override
   ConsumerState<DiagnosisScreen> createState() => _DiagnosisScreenState();
@@ -18,13 +20,25 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
   String? _capturedImagePath;
+  Uint8List? _capturedImageBytes;
 
   @override
   void initState() {
     super.initState();
-    // Reset diagnosis state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(diagnosisProvider.notifier).reset();
+      if (widget.initialImageData != null) {
+        // Use image passed from home screen
+        final path = widget.initialImageData!['path'] as String;
+        final bytes = widget.initialImageData!['bytes'] as Uint8List;
+        setState(() {
+          _capturedImagePath = path;
+          _capturedImageBytes = bytes;
+        });
+        ref.read(diagnosisProvider.notifier).setImageFromBytes(path, bytes);
+      } else {
+        _captureImage();
+      }
     });
   }
 
@@ -58,13 +72,13 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
   }
 
   Widget _buildImagePreview() {
-    if (_capturedImagePath != null) {
+    if (_capturedImageBytes != null) {
       return Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: FileImage(File(_capturedImagePath!)),
+            image: MemoryImage(_capturedImageBytes!),
             fit: BoxFit.cover,
           ),
         ),
@@ -246,12 +260,8 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
           ),
         ),
 
-        // Tips button
-        _buildControlButton(
-          icon: Icons.help_outline,
-          label: 'ヒント',
-          onTap: _showTips,
-        ),
+        // Spacer for balance
+        const SizedBox(width: 60),
       ],
     );
   }
@@ -384,10 +394,12 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       );
 
       if (photo != null && mounted) {
+        final bytes = await photo.readAsBytes();
         setState(() {
           _capturedImagePath = photo.path;
+          _capturedImageBytes = bytes;
         });
-        await ref.read(diagnosisProvider.notifier).setImage(photo.path);
+        ref.read(diagnosisProvider.notifier).setImageFromBytes(photo.path, bytes);
       }
     } catch (e) {
       if (mounted) {
@@ -415,10 +427,12 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       );
 
       if (image != null && mounted) {
+        final bytes = await image.readAsBytes();
         setState(() {
           _capturedImagePath = image.path;
+          _capturedImageBytes = bytes;
         });
-        await ref.read(diagnosisProvider.notifier).setImage(image.path);
+        ref.read(diagnosisProvider.notifier).setImageFromBytes(image.path, bytes);
       }
     } catch (e) {
       if (mounted) {
@@ -439,8 +453,10 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
   void _retakePhoto() {
     setState(() {
       _capturedImagePath = null;
+      _capturedImageBytes = null;
     });
     ref.read(diagnosisProvider.notifier).reset();
+    _captureImage();
   }
 
   Future<void> _analyzeOutfit() async {

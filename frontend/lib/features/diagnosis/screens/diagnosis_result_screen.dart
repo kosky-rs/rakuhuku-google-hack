@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
+import '../../closet/providers/closet_provider.dart';
 import '../providers/diagnosis_provider.dart';
 
 /// Diagnosis result screen showing score, suggestions, and detected items
@@ -837,28 +838,58 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
   }
 
   Future<void> _registerItems() async {
-    final success = await ref.read(diagnosisProvider.notifier).registerSelectedItems();
+    try {
+      final selectedCount = ref.read(diagnosisProvider).selectedItems.length;
 
-    if (!mounted) return;
+      if (selectedCount == 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('アイテムを選択してください'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+        return;
+      }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('クローゼットに追加しました！'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.success,
-        ),
-      );
-      context.goHome();
-    } else {
-      final error = ref.read(diagnosisProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? 'アイテムの登録に失敗しました'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.error,
-        ),
-      );
+      final success = await ref.read(diagnosisProvider.notifier).registerSelectedItems();
+
+      if (!mounted) return;
+
+      if (success) {
+        // Refresh closet data so the closet screen shows the newly added items
+        await ref.read(closetProvider.notifier).fetchCloset();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$selectedCount 件のアイテムをクローゼットに追加しました！'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.goHome();
+      } else {
+        final error = ref.read(diagnosisProvider).error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error ?? 'アイテムの登録に失敗しました'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('予期しないエラーが発生しました: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 }
