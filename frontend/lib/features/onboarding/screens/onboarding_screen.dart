@@ -49,12 +49,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.login);
     }
   }
 
   void _skip() {
-    context.go(AppRoutes.home);
+    context.go(AppRoutes.login);
   }
 
   @override

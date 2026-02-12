@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
 import '../../config/router.dart';
 
@@ -24,6 +25,30 @@ class AppScaffold extends StatelessWidget {
 /// Bottom navigation bar matching the stitch design
 class AppBottomNavigationBar extends StatelessWidget {
   const AppBottomNavigationBar({super.key});
+
+  Future<void> _launchCameraForDiagnosis(BuildContext context) async {
+    final picker = ImagePicker();
+    try {
+      final photo = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+      );
+      if (photo != null && context.mounted) {
+        final bytes = await photo.readAsBytes();
+        context.goDiagnosis({'path': photo.path, 'bytes': bytes});
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('カメラの起動に失敗しました: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   int _getCurrentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -53,35 +78,47 @@ class AppBottomNavigationBar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'ホーム',
-                isActive: currentIndex == 0,
-                onTap: () => context.go(AppRoutes.home),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  label: 'ホーム',
+                  isActive: currentIndex == 0,
+                  onTap: () => context.go(AppRoutes.home),
+                ),
               ),
-              _NavItem(
-                icon: Icons.checkroom_outlined,
-                activeIcon: Icons.checkroom,
-                label: 'クローゼット',
-                isActive: currentIndex == 1,
-                onTap: () => context.go(AppRoutes.closet),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.checkroom_outlined,
+                  activeIcon: Icons.checkroom,
+                  label: 'クローゼット',
+                  isActive: currentIndex == 1,
+                  onTap: () => context.go(AppRoutes.closet),
+                ),
               ),
-              _NavItem(
-                icon: Icons.event_note_outlined,
-                activeIcon: Icons.event_note,
-                label: '履歴',
-                isActive: currentIndex == 2,
-                onTap: () => context.go(AppRoutes.history),
+              Expanded(
+                child: _CameraButton(
+                  onTap: () => _launchCameraForDiagnosis(context),
+                ),
               ),
-              _NavItem(
-                icon: Icons.settings_outlined,
-                activeIcon: Icons.settings,
-                label: '設定',
-                isActive: currentIndex == 3,
-                onTap: () => context.go(AppRoutes.settings),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.event_note_outlined,
+                  activeIcon: Icons.event_note,
+                  label: '履歴',
+                  isActive: currentIndex == 2,
+                  onTap: () => context.go(AppRoutes.history),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.settings_outlined,
+                  activeIcon: Icons.settings,
+                  label: '設定',
+                  isActive: currentIndex == 3,
+                  onTap: () => context.go(AppRoutes.settings),
+                ),
               ),
             ],
           ),
@@ -129,6 +166,63 @@ class _NavItem extends StatelessWidget {
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               color: color,
               letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CameraButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CameraButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Transform.translate(
+            offset: const Offset(0, -12),
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -10),
+            child: Text(
+              'コーデ診断',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ],

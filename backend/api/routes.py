@@ -3,11 +3,14 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel, Field
 
 from agent.tools.weather import weather_tool
-from agent.tools.closet import closet_tool, get_all_categories
+from agent.tools.closet import (
+    closet_tool, get_all_categories, add_closet_item, add_closet_items_bulk,
+    delete_closet_item, save_outfit_history, get_outfit_history,
+)
 from agent.tools.calendar import calendar_tool
 from agent.tools.style_advisor import style_advisor_tool
 from agent.tools.outfit_analyzer import outfit_analyzer_tool
@@ -72,6 +75,17 @@ class BulkClosetItemsRequest(BaseModel):
     user_id: str = "demo_user"
 
 
+class OutfitHistorySave(BaseModel):
+    """コーデ履歴保存リクエスト"""
+    user_id: str = "demo_user"
+    items: list[dict] = []
+    weather: Optional[dict] = None
+    tpo: Optional[dict] = None
+    score: Optional[float] = None
+    feedback: Optional[str] = None
+    worn_date: Optional[str] = None
+
+
 # ==================== ヘルスチェック ====================
 
 @router.get("/health")
@@ -83,7 +97,10 @@ async def health_check():
 # ==================== コーディネート提案 ====================
 
 @router.post("/outfit/recommend")
-async def recommend_outfit(request: OutfitRequest):
+async def recommend_outfit(
+    request: OutfitRequest,
+    authorization: Optional[str] = Header(default=None),
+):
     """
     コーディネートを提案する
 
@@ -92,6 +109,11 @@ async def recommend_outfit(request: OutfitRequest):
     3. クローゼットから服を取得
     4. 最適な組み合わせを評価・提案
     """
+    # access_tokenを抽出
+    access_token = None
+    if authorization and authorization.startswith("Bearer "):
+        access_token = authorization[7:]
+
     # 天気取得
     weather = await weather_tool(
         latitude=request.latitude,
@@ -101,7 +123,8 @@ async def recommend_outfit(request: OutfitRequest):
     # カレンダーからTPO取得
     calendar_data = await calendar_tool(
         user_id=request.user_id,
-        target_date=request.target_date
+        target_date=request.target_date,
+        access_token=access_token,
     )
     tpo = calendar_data["tpo"]
 
@@ -171,7 +194,7 @@ async def recommend_outfit(request: OutfitRequest):
             "score": evaluation["total_score"],
             "feedback": evaluation["feedback"],
         },
-        "alternatives": alternatives[:2],  # 最大2つ
+        "alternatives": alternatives[:2],
         "evaluation_details": evaluation,
     }
 
@@ -248,12 +271,14 @@ async def get_closet_categories(user_id: str = "demo_user"):
 
 
 @router.post("/closet/items")
-async def add_closet_item(item: ClosetItemCreate, user_id: str = "demo_user"):
+async def add_closet_item_endpoint(item: ClosetItemCreate, user_id: str = "demo_user"):
     """クローゼットにアイテムを追加"""
-    # TODO: Firestoreに保存
+    item_data = item.model_dump()
+    saved_item = await add_closet_item(user_id=user_id, item_data=item_data)
+
     return {
         "message": "アイテムを追加しました",
-        "item": item.model_dump(),
+        "item": saved_item,
     }
 
 
@@ -267,9 +292,21 @@ async def get_weather(latitude: float = 35.6762, longitude: float = 139.6503):
 
 
 @router.get("/calendar")
-async def get_calendar(user_id: str = "demo_user", target_date: Optional[str] = None):
+async def get_calendar(
+    user_id: str = "demo_user",
+    target_date: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
+):
     """カレンダー情報とTPOを取得"""
-    calendar_data = await calendar_tool(user_id=user_id, target_date=target_date)
+    access_token = None
+    if authorization and authorization.startswith("Bearer "):
+        access_token = authorization[7:]
+
+    calendar_data = await calendar_tool(
+        user_id=user_id,
+        target_date=target_date,
+        access_token=access_token,
+    )
     return calendar_data
 
 
@@ -284,14 +321,6 @@ async def diagnose_outfit(request: DiagnoseRequest):
     2. 着用アイテムを検出・クロップ
     3. 改善提案に基づく商品を検索
     4. クローゼットから代替アイテムを提案（オプション）
-
-    Returns:
-        {
-            "evaluation": { score, good_points, improvement_suggestions, ... },
-            "detected_items": [ { category, name, color, cropped_image_base64, ... } ],
-            "product_suggestions": [ { category, affiliate_links, ... } ],
-            "closet_suggestions": [ { ... } ]  # クローゼットからの提案
-        }
     """
     # 画像がない場合はエラー
     if not request.image_base64 and not request.image_url:
@@ -339,19 +368,10 @@ async def diagnose_outfit(request: DiagnoseRequest):
 
 
 async def _get_closet_suggestions(user_id: str, improvements: list[dict]) -> list[dict]:
-    """
-    クローゼットから改善提案に合うアイテムを検索
-
-    Args:
-        user_id: ユーザーID
-        improvements: 改善提案リスト
-
-    Returns:
-        マッチするクローゼットアイテムのリスト
-    """
+    """クローゼットから改善提案に合うアイテムを検索"""
     suggestions = []
 
-    for imp in improvements[:3]:  # 最大3つ
+    for imp in improvements[:3]:
         category = imp.get("category", "")
         suggested_color = imp.get("suggested_color", "")
 
@@ -366,7 +386,7 @@ async def _get_closet_suggestions(user_id: str, improvements: list[dict]) -> lis
         for item in closet_items:
             item_color = item.get("color", "").lower()
             if suggested_color and suggested_color.lower() in item_color:
-                matching_items.insert(0, item)  # 色マッチは先頭に
+                matching_items.insert(0, item)
             else:
                 matching_items.append(item)
 
@@ -375,7 +395,7 @@ async def _get_closet_suggestions(user_id: str, improvements: list[dict]) -> lis
                 "improvement_point": imp.get("point", ""),
                 "category": category,
                 "suggested_item": matching_items[0],
-                "alternative_items": matching_items[1:3],  # 最大2つの代替
+                "alternative_items": matching_items[1:3],
             })
 
     return suggestions
@@ -384,7 +404,7 @@ async def _get_closet_suggestions(user_id: str, improvements: list[dict]) -> lis
 # ==================== 一括登録 ====================
 
 @router.post("/closet/items/bulk")
-async def add_closet_items_bulk(request: BulkClosetItemsRequest):
+async def add_closet_items_bulk_endpoint(request: BulkClosetItemsRequest):
     """
     複数のアイテムを一括でクローゼットに登録
 
@@ -393,46 +413,72 @@ async def add_closet_items_bulk(request: BulkClosetItemsRequest):
     if not request.items:
         raise HTTPException(status_code=400, detail="items is required")
 
-    registered_items = []
-    errors = []
+    items_data = []
+    for item in request.items:
+        items_data.append({
+            "name": item.name,
+            "category": item.category,
+            "color": item.color,
+            "source": item.source,
+            "source_diagnosis_id": item.source_diagnosis_id,
+            "image_url": None,  # TODO: Firebase Storageにアップロード後のURLを設定
+            "season": _estimate_season(item.category),
+            "formality": _estimate_formality(item.name),
+            "tags": [],
+        })
 
-    for i, item in enumerate(request.items):
-        try:
-            # TODO: Firestoreに保存
-            # ここではモック実装
-            registered_item = {
-                "id": f"item_{date.today().isoformat()}_{i}",
-                "name": item.name,
-                "category": item.category,
-                "color": item.color,
-                "source": item.source,
-                "source_diagnosis_id": item.source_diagnosis_id,
-                "image_url": None,  # TODO: Cloud Storageにアップロード後のURL
-                "season": _estimate_season(item.category),
-                "formality": _estimate_formality(item.name),
-                "tags": [],
-            }
-            registered_items.append(registered_item)
-
-        except Exception as e:
-            errors.append({
-                "index": i,
-                "item_name": item.name,
-                "error": str(e)
-            })
+    registered_items = await add_closet_items_bulk(
+        user_id=request.user_id,
+        items=items_data,
+    )
 
     return {
         "message": f"{len(registered_items)}件のアイテムを登録しました",
         "registered_items": registered_items,
-        "errors": errors if errors else None,
         "total_registered": len(registered_items),
-        "total_errors": len(errors),
     }
+
+
+# ==================== コーデ履歴 ====================
+
+@router.post("/outfit/history")
+async def save_outfit_history_endpoint(request: OutfitHistorySave):
+    """コーデ履歴を保存"""
+    history_data = {
+        "items": request.items,
+        "weather": request.weather,
+        "tpo": request.tpo,
+        "score": request.score,
+        "feedback": request.feedback,
+        "worn_date": request.worn_date or date.today().isoformat(),
+    }
+    saved = await save_outfit_history(user_id=request.user_id, history_data=history_data)
+    return {"message": "履歴を保存しました", "history": saved}
+
+
+@router.get("/outfit/history")
+async def get_outfit_history_endpoint(
+    user_id: str = "demo_user",
+    limit: int = 30,
+):
+    """コーデ履歴を取得"""
+    history = await get_outfit_history(user_id=user_id, limit=limit)
+    return {"history": history, "total_count": len(history)}
+
+
+# ==================== クローゼットアイテム削除 ====================
+
+@router.delete("/closet/items/{item_id}")
+async def delete_closet_item_endpoint(item_id: str, user_id: str = "demo_user"):
+    """クローゼットからアイテムを削除"""
+    success = await delete_closet_item(user_id=user_id, item_id=item_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="アイテムが見つかりません")
+    return {"message": "アイテムを削除しました", "item_id": item_id}
 
 
 def _estimate_season(category: str) -> list[str]:
     """カテゴリから季節を推定"""
-    # 簡易推定（実際はAIで判断）
     if category == "outerwear":
         return ["autumn", "winter"]
     elif category == "tops":

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
+import '../../../core/providers/user_provider.dart';
 
 /// Splash screen matching app_splash_screen mockup
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
@@ -41,12 +43,33 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to onboarding after animation
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) {
-        context.go(AppRoutes.onboarding);
+    // Initialize user state and navigate based on auth status
+    _initializeAndNavigate();
+  }
+
+  Future<void> _initializeAndNavigate() async {
+    // Initialize user state
+    await ref.read(userProvider.notifier).initialize();
+
+    // Wait for animation to complete
+    await Future.delayed(const Duration(milliseconds: 3000));
+
+    if (!mounted) return;
+
+    final userState = ref.read(userProvider);
+
+    if (userState.isSignedIn) {
+      if (userState.needsOnboarding) {
+        // User is signed in but hasn't completed onboarding
+        context.go(AppRoutes.profileSetup);
+      } else {
+        // User is signed in and has completed onboarding
+        context.go(AppRoutes.home);
       }
-    });
+    } else {
+      // User is not signed in, show tutorial then login
+      context.go(AppRoutes.onboarding);
+    }
   }
 
   @override

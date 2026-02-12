@@ -1,7 +1,6 @@
 """Weather Tool - 天気・気温情報を取得"""
 import os
 import httpx
-from typing import Optional
 
 
 async def get_weather(
@@ -17,27 +16,14 @@ async def get_weather(
 
     Returns:
         天気情報を含む辞書
-        {
-            "weather": "晴れ",
-            "temperature": 18,
-            "feels_like": 16,
-            "humidity": 45,
-            "precipitation_probability": 10,
-            "description": "晴れ、18°C、降水確率10%"
-        }
+
+    Raises:
+        ValueError: OPENWEATHER_API_KEY が設定されていない場合
     """
     api_key = os.getenv("OPENWEATHER_API_KEY")
 
     if not api_key:
-        # デモ用のモックデータを返す
-        return {
-            "weather": "晴れ",
-            "temperature": 18,
-            "feels_like": 16,
-            "humidity": 45,
-            "precipitation_probability": 10,
-            "description": "晴れ、18°C、降水確率10%"
-        }
+        raise ValueError("OPENWEATHER_API_KEY environment variable is required")
 
     url = "https://api.openweathermap.org/data/2.5/weather"
     params = {
@@ -50,6 +36,7 @@ async def get_weather(
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url, params=params)
+        response.raise_for_status()
         data = response.json()
 
     weather_main = data.get("weather", [{}])[0].get("main", "不明")
@@ -71,14 +58,50 @@ async def get_weather(
     }
     weather_ja = weather_ja_map.get(weather_main, weather_desc)
 
+    # 天気に基づく服装アドバイスを生成
+    recommendation = _get_weather_recommendation(weather_main, temp, feels_like, humidity)
+
     return {
         "weather": weather_ja,
+        "condition": weather_main.lower(),
         "temperature": temp,
         "feels_like": feels_like,
         "humidity": humidity,
         "precipitation_probability": 0,  # 基本APIには含まれない
-        "description": f"{weather_ja}、{temp}°C、体感温度{feels_like}°C"
+        "description": f"{weather_ja}、{temp}°C、体感温度{feels_like}°C",
+        "recommendation": recommendation,
     }
+
+
+def _get_weather_recommendation(condition: str, temp: int, feels_like: int, humidity: int) -> str:
+    """天気に基づく服装アドバイスを生成"""
+    parts = []
+
+    if condition in ("Rain", "Drizzle"):
+        parts.append("傘をお忘れなく。防水素材がおすすめです")
+    elif condition == "Snow":
+        parts.append("雪対策に防水ブーツがおすすめです")
+    elif condition == "Thunderstorm":
+        parts.append("雷雨の予報です。外出は最小限に")
+
+    if feels_like < 5:
+        parts.append("厳しい寒さです。厚手のアウターやマフラーを")
+    elif feels_like < 10:
+        parts.append("冷え込みます。暖かいアウターを羽織りましょう")
+    elif feels_like < 15:
+        parts.append("少し肌寒い日です。軽いアウターがあると安心")
+    elif feels_like > 30:
+        parts.append("猛暑日です。通気性の良い服装で熱中症対策を")
+    elif feels_like > 25:
+        parts.append("暑い日です。涼しい素材の服がおすすめ")
+
+    if humidity > 80 and condition not in ("Rain", "Drizzle", "Snow", "Thunderstorm"):
+        parts.append("湿度が高めです。さらっとした素材が快適")
+
+    if not parts:
+        parts.append("過ごしやすい天気です。お好みのコーデを楽しんで")
+
+    return "。".join(parts)
 
 
 # ADK Tool として公開

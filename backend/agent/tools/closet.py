@@ -1,10 +1,9 @@
-"""Closet Tool - クローゼット内の服を検索・取得"""
+"""Closet Tool - クローゼット内の服を検索・取得（Firestore版）"""
 import logging
 from typing import Optional
 from pydantic import BaseModel
 
-# MOCK: モックモード判定のインポート
-from mock import is_mock_mode  # MOCK: インポート - 本番リリース前に削除必須
+from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
@@ -19,101 +18,18 @@ class ClosetItem(BaseModel):
     formality: str  # casual, business_casual, formal
     image_url: Optional[str] = None
     tags: list[str] = []
+    brand: Optional[str] = None
+    usage_score: int = 0
+    last_worn_at: Optional[str] = None
+    created_at: Optional[str] = None
 
 
-# MOCK: デモ用のモックデータ - 本番リリース前にFirestoreに移行必須
-MOCK_CLOSET = [  # MOCK: モックデータ定義開始
-    ClosetItem(
-        id="1",
-        name="ネイビージャケット",
-        category="outerwear",
-        color="navy",
-        season=["spring", "autumn", "winter"],
-        formality="formal",
-        tags=["定番", "商談向け"]
-    ),
-    ClosetItem(
-        id="2",
-        name="白シャツ",
-        category="tops",
-        color="white",
-        season=["spring", "summer", "autumn", "winter"],
-        formality="formal",
-        tags=["清潔感", "万能"]
-    ),
-    ClosetItem(
-        id="3",
-        name="グレースラックス",
-        category="bottoms",
-        color="gray",
-        season=["spring", "autumn", "winter"],
-        formality="formal",
-        tags=["定番"]
-    ),
-    ClosetItem(
-        id="4",
-        name="黒革靴",
-        category="shoes",
-        color="black",
-        season=["spring", "summer", "autumn", "winter"],
-        formality="formal",
-        tags=["ビジネス"]
-    ),
-    ClosetItem(
-        id="5",
-        name="ライトブルーシャツ",
-        category="tops",
-        color="light_blue",
-        season=["spring", "summer"],
-        formality="business_casual",
-        tags=["爽やか"]
-    ),
-    ClosetItem(
-        id="6",
-        name="チノパン（ベージュ）",
-        category="bottoms",
-        color="beige",
-        season=["spring", "summer", "autumn"],
-        formality="business_casual",
-        tags=["カジュアル"]
-    ),
-    ClosetItem(
-        id="7",
-        name="ネイビーポロシャツ",
-        category="tops",
-        color="navy",
-        season=["summer"],
-        formality="casual",
-        tags=["夏向け"]
-    ),
-    ClosetItem(
-        id="8",
-        name="グレーカーディガン",
-        category="outerwear",
-        color="gray",
-        season=["spring", "autumn"],
-        formality="business_casual",
-        tags=["オフィスカジュアル"]
-    ),
-    ClosetItem(
-        id="9",
-        name="白スニーカー",
-        category="shoes",
-        color="white",
-        season=["spring", "summer", "autumn"],
-        formality="casual",
-        tags=["きれいめ"]
-    ),
-    ClosetItem(
-        id="10",
-        name="ダークグレースーツ上下",
-        category="outerwear",
-        color="dark_gray",
-        season=["spring", "autumn", "winter"],
-        formality="formal",
-        tags=["フォーマル", "重要会議"]
-    ),
-]
+def _get_db():
+    """Firestoreクライアントを取得"""
+    import firebase_admin
+    if not firebase_admin._apps:
+        raise RuntimeError("Firebase Admin SDK is not initialized. Check your credentials.")
+    return firestore.client()
 
 
 async def get_closet_items(
@@ -134,43 +50,39 @@ async def get_closet_items(
     Returns:
         条件に合致するアイテムのリスト
     """
-    # MOCK: モックモードの場合はモックデータを使用
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        logger.info("MOCK: Using mock closet data")  # MOCK: ログ
-        items = MOCK_CLOSET  # MOCK: モックデータ使用
+    db = _get_db()
+    items_ref = db.collection("users").document(user_id).collection("closet_items")
 
-        if category:
-            items = [item for item in items if item.category == category]
-
-        if season:
-            items = [item for item in items if season in item.season]
-
-        if formality:
-            items = [item for item in items if item.formality == formality]
-
-        return [item.model_dump() for item in items]
-    # MOCK: ここまでモック処理 - 以下は本番用コード
-
-    # TODO: Firestoreから実際のデータを取得
-    # 本番環境では以下のようにFirestoreからデータを取得する:
-    # from google.cloud import firestore
-    # db = firestore.Client()
-    # items_ref = db.collection('users').document(user_id).collection('closet')
-    # ...
-
-    # 暫定的にモックデータを返す（本番リリース前に実装必須）
-    items = MOCK_CLOSET  # MOCK: TODO - Firestoreに置き換え
+    # Firestoreクエリ構築
+    query = items_ref
 
     if category:
-        items = [item for item in items if item.category == category]
-
-    if season:
-        items = [item for item in items if season in item.season]
+        query = query.where("category", "==", category)
 
     if formality:
-        items = [item for item in items if item.formality == formality]
+        query = query.where("formality", "==", formality)
 
-    return [item.model_dump() for item in items]
+    # クエリ実行
+    docs = query.stream()
+
+    items = []
+    for doc in docs:
+        item_data = doc.to_dict()
+        item_data["id"] = doc.id
+
+        # seasonフィルタ（array-contains は1つしか使えないため、Pythonでフィルタ）
+        if season and season not in item_data.get("season", []):
+            continue
+
+        # Ensure frontend-expected fields have defaults
+        item_data.setdefault("brand", None)
+        item_data.setdefault("usage_score", 0)
+        item_data.setdefault("last_worn_at", None)
+        item_data.setdefault("created_at", None)
+
+        items.append(item_data)
+
+    return items
 
 
 async def get_all_categories(user_id: str = "demo_user") -> dict:
@@ -180,27 +92,165 @@ async def get_all_categories(user_id: str = "demo_user") -> dict:
     Returns:
         カテゴリ別のアイテム数
     """
-    # MOCK: モックモードの場合はモックデータを使用
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        logger.info("MOCK: Using mock categories data")  # MOCK: ログ
-        items = MOCK_CLOSET  # MOCK: モックデータ使用
-        categories = {}
-        for item in items:
-            if item.category not in categories:
-                categories[item.category] = 0
-            categories[item.category] += 1
-        return categories
-    # MOCK: ここまでモック処理 - 以下は本番用コード
+    db = _get_db()
+    items_ref = db.collection("users").document(user_id).collection("closet_items")
 
-    # TODO: Firestoreから実際のデータを取得
-    items = MOCK_CLOSET  # MOCK: TODO - Firestoreに置き換え
+    docs = items_ref.stream()
+
     categories = {}
-    for item in items:
-        if item.category not in categories:
-            categories[item.category] = 0
-        categories[item.category] += 1
+    for doc in docs:
+        item_data = doc.to_dict()
+        cat = item_data.get("category", "other")
+        if cat not in categories:
+            categories[cat] = 0
+        categories[cat] += 1
 
     return categories
+
+
+async def add_closet_item(user_id: str, item_data: dict) -> dict:
+    """
+    クローゼットにアイテムを追加します。
+
+    Args:
+        user_id: ユーザーID
+        item_data: アイテムデータ
+
+    Returns:
+        追加されたアイテム（IDを含む）
+    """
+    db = _get_db()
+    items_ref = db.collection("users").document(user_id).collection("closet_items")
+
+    # Ensure required fields for frontend model alignment
+    from datetime import datetime as _dt
+    item_data.setdefault("created_at", _dt.utcnow().isoformat())
+    item_data.setdefault("brand", None)
+    item_data.setdefault("usage_score", 0)
+    item_data.setdefault("last_worn_at", None)
+
+    # Firestoreに保存
+    _, doc_ref = items_ref.add(item_data)
+    item_data["id"] = doc_ref.id
+
+    return item_data
+
+
+async def add_closet_items_bulk(user_id: str, items: list[dict]) -> list[dict]:
+    """
+    複数アイテムを一括でクローゼットに追加します。
+
+    Args:
+        user_id: ユーザーID
+        items: アイテムデータのリスト
+
+    Returns:
+        追加されたアイテムのリスト
+    """
+    db = _get_db()
+    batch = db.batch()
+    items_ref = db.collection("users").document(user_id).collection("closet_items")
+
+    from datetime import datetime as _dt
+
+    registered = []
+    for item_data in items:
+        item_data.setdefault("created_at", _dt.utcnow().isoformat())
+        item_data.setdefault("brand", None)
+        item_data.setdefault("usage_score", 0)
+        item_data.setdefault("last_worn_at", None)
+
+        doc_ref = items_ref.document()
+        batch.set(doc_ref, item_data)
+        item_data["id"] = doc_ref.id
+        registered.append(item_data)
+
+    batch.commit()
+    return registered
+
+
+async def delete_closet_item(user_id: str, item_id: str) -> bool:
+    """
+    クローゼットからアイテムを削除します。
+
+    Args:
+        user_id: ユーザーID
+        item_id: アイテムID
+
+    Returns:
+        削除に成功したかどうか
+    """
+    db = _get_db()
+    doc_ref = db.collection("users").document(user_id).collection("closet_items").document(item_id)
+
+    doc = doc_ref.get()
+    if not doc.exists:
+        return False
+
+    doc_ref.delete()
+    return True
+
+
+async def save_outfit_history(user_id: str, history_data: dict) -> dict:
+    """
+    コーデ履歴を保存します。
+
+    Args:
+        user_id: ユーザーID
+        history_data: 履歴データ
+
+    Returns:
+        保存された履歴（IDを含む）
+    """
+    db = _get_db()
+    history_ref = db.collection("users").document(user_id).collection("outfit_history")
+
+    # Use server timestamp for reliable Firestore sorting
+    history_data["created_at"] = firestore.SERVER_TIMESTAMP
+
+    _, doc_ref = history_ref.add(history_data)
+    history_data["id"] = doc_ref.id
+    # Replace SERVER_TIMESTAMP sentinel with ISO string for the response
+    from datetime import datetime as _dt
+    history_data["created_at"] = _dt.utcnow().isoformat()
+
+    return history_data
+
+
+async def get_outfit_history(user_id: str, limit: int = 30) -> list[dict]:
+    """
+    コーデ履歴を取得します。
+
+    Args:
+        user_id: ユーザーID
+        limit: 取得件数
+
+    Returns:
+        履歴のリスト（新しい順）
+    """
+    db = _get_db()
+    history_ref = db.collection("users").document(user_id).collection("outfit_history")
+
+    query = history_ref.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)
+    docs = query.stream()
+
+    from datetime import datetime as _dt
+
+    history = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        # Convert Firestore timestamps to ISO strings for JSON serialization
+        for key in ("created_at",):
+            val = data.get(key)
+            if val is not None and not isinstance(val, str):
+                try:
+                    data[key] = val.isoformat()
+                except AttributeError:
+                    data[key] = str(val)
+        history.append(data)
+
+    return history
 
 
 # ADK Tools として公開

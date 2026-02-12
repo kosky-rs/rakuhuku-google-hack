@@ -3,16 +3,11 @@ import base64
 import io
 import json
 import logging
-import os
 from typing import Optional
 from pydantic import BaseModel, Field
 import httpx
 
-# ロガー設定
 logger = logging.getLogger(__name__)
-
-# MOCK: モックモード判定のインポート
-from mock import is_mock_mode  # MOCK: インポート - 本番リリース前に削除必須
 
 
 # ==================== データモデル ====================
@@ -59,13 +54,6 @@ class OutfitAnalysisResult(BaseModel):
     analysis_context: dict = Field(default_factory=dict, description="分析時のコンテキスト")
 
 
-class OutfitAnalysisRequest(BaseModel):
-    """コーデ分析リクエスト"""
-    image_base64: Optional[str] = Field(default=None, description="Base64エンコードされた画像")
-    image_url: Optional[str] = Field(default=None, description="画像URL")
-    context: dict = Field(default_factory=dict, description="コンテキスト（日付、天気、イベント等）")
-
-
 # ==================== Gemini Vision によるコーデ評価 ====================
 
 async def evaluate_outfit_with_gemini(
@@ -82,38 +70,9 @@ async def evaluate_outfit_with_gemini(
     Returns:
         OutfitEvaluation: 評価結果
     """
-    # MOCK: モックモードの場合はモックデータを返す
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        from mock.gemini_mock import mock_evaluate_outfit  # MOCK: モックインポート
-        logger.info("MOCK: Using mock evaluation")  # MOCK: ログ
-        mock_result = mock_evaluate_outfit(image_base64, context)  # MOCK: モック呼び出し
-        # MOCK: モック結果をOutfitEvaluationに変換
-        suggestions = []
-        for s in mock_result.get("improvement_suggestions", []):
-            suggestions.append(ImprovementSuggestion(
-                point=s.get("point", ""),
-                category=s.get("category", "general"),
-                suggested_color=s.get("suggested_color"),
-                suggested_style=s.get("suggested_style")
-            ))
-        return OutfitEvaluation(
-            score=mock_result.get("score", 5.0),
-            good_points=mock_result.get("good_points", []),
-            improvement_suggestions=suggestions[:3],
-            overall_style=mock_result.get("overall_style", "カジュアル"),
-            color_harmony=mock_result.get("color_harmony", "")
-        )
-    # MOCK: ここまでモック処理 - 以下は本番用コード
+    from vertexai.generative_models import GenerativeModel, Part
 
-    import google.generativeai as genai
-
-    # API設定
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY or GEMINI_API_KEY environment variable is required")
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel("gemini-2.5-flash")
 
     # コンテキスト情報をプロンプトに組み込み
     context_str = ""
@@ -165,11 +124,11 @@ async def evaluate_outfit_with_gemini(
         logger.error(f"Base64 decode error: {e}")
         return _get_default_evaluation()
 
-    # Gemini APIを呼び出し
+    # Gemini APIを呼び出し（Vertex AI）
     try:
         response = model.generate_content([
             prompt,
-            {"mime_type": "image/jpeg", "data": image_data}
+            Part.from_data(data=image_data, mime_type="image/jpeg"),
         ])
     except Exception as e:
         logger.error(f"Gemini API error: {e}")
@@ -208,7 +167,7 @@ async def evaluate_outfit_with_gemini(
     return OutfitEvaluation(
         score=result_dict.get("score", 5.0),
         good_points=result_dict.get("good_points", []),
-        improvement_suggestions=suggestions[:3],  # 最大3つ
+        improvement_suggestions=suggestions[:3],
         overall_style=result_dict.get("overall_style", "カジュアル"),
         color_harmony=result_dict.get("color_harmony", "")
     )
@@ -239,54 +198,6 @@ async def detect_items_with_cloud_vision(
     Returns:
         list[DetectedItem]: 検出されたアイテムのリスト
     """
-    # MOCK: モックモードの場合はモックデータを返す
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        from mock.vision_mock import mock_object_localization  # MOCK: モックインポート
-        logger.info("MOCK: Using mock object localization")  # MOCK: ログ
-
-        # MOCK: モック結果を本物のCloud Vision APIと同じ形式で処理
-        mock_objects = mock_object_localization(image_base64)  # MOCK: モック呼び出し
-
-        # MOCK: 服飾関連のオブジェクトマッピング（本番コードと同じ）
-        clothing_labels = {
-            "Shirt": ("tops", "シャツ"),
-            "T-shirt": ("tops", "Tシャツ"),
-            "Blouse": ("tops", "ブラウス"),
-            "Pants": ("bottoms", "パンツ"),
-            "Jeans": ("bottoms", "ジーンズ"),
-            "Trousers": ("bottoms", "スラックス"),
-            "Jacket": ("outerwear", "ジャケット"),
-            "Coat": ("outerwear", "コート"),
-            "Shoe": ("shoes", "シューズ"),
-            "Sneakers": ("shoes", "スニーカー"),
-        }
-
-        detected_items = []
-        for obj in mock_objects:
-            label = obj.name
-            if label in clothing_labels:
-                category, japanese_name = clothing_labels[label]
-                vertices = obj.bounding_poly.normalized_vertices
-                if len(vertices) >= 4:
-                    x_coords = [v.x for v in vertices]
-                    y_coords = [v.y for v in vertices]
-                    bbox = BoundingBox(
-                        x=min(x_coords),
-                        y=min(y_coords),
-                        width=max(x_coords) - min(x_coords),
-                        height=max(y_coords) - min(y_coords)
-                    )
-                    detected_items.append(DetectedItem(
-                        category=category,
-                        name=japanese_name,
-                        color="",
-                        confidence=obj.score,
-                        bounding_box=bbox,
-                        cropped_image_base64=None
-                    ))
-        return detected_items
-    # MOCK: ここまでモック処理 - 以下は本番用コード
-
     from google.cloud import vision
 
     client = vision.ImageAnnotatorClient()
@@ -380,29 +291,9 @@ async def analyze_item_details_with_gemini(
     Returns:
         list[DetectedItem]: 詳細情報が追加されたアイテムリスト
     """
-    # MOCK: モックモードの場合はモックデータを返す
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        from mock.gemini_mock import mock_analyze_item_details  # MOCK: モックインポート
-        logger.info("MOCK: Using mock item details analysis")  # MOCK: ログ
-        # MOCK: detected_itemsをdict形式に変換してモック関数に渡す
-        items_dict = [item.model_dump() for item in detected_items]
-        mock_result = mock_analyze_item_details(image_base64, items_dict)  # MOCK: モック呼び出し
-        # MOCK: モック結果を元のDetectedItemオブジェクトに反映
-        for i, item_data in enumerate(mock_result):
-            if i < len(detected_items):
-                if "color" in item_data and item_data["color"]:
-                    detected_items[i].color = item_data["color"]
-        return detected_items
-    # MOCK: ここまでモック処理 - 以下は本番用コード
+    from vertexai.generative_models import GenerativeModel, Part
 
-    import google.generativeai as genai
-
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return detected_items
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel("gemini-2.5-flash")
 
     # 検出アイテムの情報をまとめる
     items_info = []
@@ -442,7 +333,7 @@ async def analyze_item_details_with_gemini(
     try:
         response = model.generate_content([
             prompt,
-            {"mime_type": "image/jpeg", "data": image_data}
+            Part.from_data(data=image_data, mime_type="image/jpeg"),
         ])
 
         response_text = response.text.strip()
@@ -481,17 +372,6 @@ async def crop_detected_items(
     Returns:
         list[DetectedItem]: クロップ画像が追加されたアイテムリスト
     """
-    # MOCK: モックモードの場合はダミーのBase64を設定
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        logger.info("MOCK: Skipping actual image cropping, using placeholder")  # MOCK: ログ
-        # MOCK: 各アイテムにダミーのBase64を設定（1x1ピクセルの透明PNG）
-        # MOCK: 実際の画像処理をスキップして処理時間を短縮
-        dummy_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="  # MOCK: 1x1透明PNG
-        for item in detected_items:
-            item.cropped_image_base64 = dummy_base64  # MOCK: ダミー画像設定
-        return detected_items
-    # MOCK: ここまでモック処理 - 以下は本番用コード
-
     from PIL import Image
 
     # 画像を読み込み
@@ -545,11 +425,6 @@ async def analyze_outfit_photo(
 
     Returns:
         dict: 分析結果
-        {
-            "evaluation": OutfitEvaluation,
-            "detected_items": list[DetectedItem],
-            "analysis_context": dict
-        }
     """
     # 画像URLからBase64を取得
     if not image_base64 and image_url:
@@ -594,38 +469,9 @@ async def fallback_detect_items_with_gemini(image_base64: str) -> list[DetectedI
     Cloud Vision APIが使えない場合のフォールバック
     Gemini Visionでアイテムを検出
     """
-    # MOCK: モックモードの場合はモックデータを返す
-    if is_mock_mode():  # MOCK: モードチェック - 本番リリース前に削除必須
-        from mock.gemini_mock import mock_detect_items  # MOCK: モックインポート
-        logger.info("MOCK: Using mock fallback item detection")  # MOCK: ログ
-        mock_result = mock_detect_items(image_base64)  # MOCK: モック呼び出し
-        # MOCK: モック結果をDetectedItemオブジェクトに変換
-        detected_items = []
-        for item in mock_result:
-            bbox = item.get("bounding_box", {})
-            detected_items.append(DetectedItem(
-                category=item.get("category", "tops"),
-                name=item.get("name", "アイテム"),
-                color=item.get("color", ""),
-                confidence=item.get("confidence", 0.8),
-                bounding_box=BoundingBox(
-                    x=bbox.get("x", 0.0),
-                    y=bbox.get("y", 0.0),
-                    width=bbox.get("width", 0.3),
-                    height=bbox.get("height", 0.3)
-                )
-            ))
-        return detected_items
-    # MOCK: ここまでモック処理 - 以下は本番用コード
+    from vertexai.generative_models import GenerativeModel, Part
 
-    import google.generativeai as genai
-
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return []
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel("gemini-2.5-flash")
 
     prompt = """
 この全身写真に写っている服飾アイテムを検出してください。
@@ -657,7 +503,7 @@ async def fallback_detect_items_with_gemini(image_base64: str) -> list[DetectedI
     try:
         response = model.generate_content([
             prompt,
-            {"mime_type": "image/jpeg", "data": image_data}
+            Part.from_data(data=image_data, mime_type="image/jpeg"),
         ])
 
         response_text = response.text.strip()
@@ -675,7 +521,7 @@ async def fallback_detect_items_with_gemini(image_base64: str) -> list[DetectedI
                 category=item.get("category", "tops"),
                 name=item.get("name", "アイテム"),
                 color=item.get("color", ""),
-                confidence=0.8,  # Geminiの場合は固定
+                confidence=0.8,
                 bounding_box=BoundingBox(
                     x=pos.get("x", 0.0),
                     y=pos.get("y", 0.0),

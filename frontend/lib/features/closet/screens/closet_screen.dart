@@ -74,7 +74,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
                     Icons.account_circle_outlined,
                     color: isDark ? Colors.white : AppColors.textPrimary,
                   ),
-                  onPressed: () {},
+                  onPressed: () => context.goSettings(),
                 ),
                 Expanded(
                   child: Text(
@@ -238,13 +238,13 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
   }
 }
 
-class _ItemDetailSheet extends StatelessWidget {
+class _ItemDetailSheet extends ConsumerWidget {
   final ClothingItem item;
 
   const _ItemDetailSheet({required this.item});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -336,6 +336,14 @@ class _ItemDetailSheet extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
+                // Delete button
+                IconButton(
+                  onPressed: () => _confirmDelete(context, ref),
+                  icon: const Icon(Icons.delete_outline),
+                  color: AppColors.error,
+                  tooltip: '削除',
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
@@ -347,7 +355,6 @@ class _ItemDetailSheet extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to edit screen
                     },
                     child: const Text('編集'),
                   ),
@@ -357,6 +364,44 @@ class _ItemDetailSheet extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('アイテムを削除'),
+        content: Text('「${item.name}」を削除してもよろしいですか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              Navigator.pop(context);
+              final success =
+                  await ref.read(closetProvider.notifier).deleteItem(item.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text(success ? '「${item.name}」を削除しました' : '削除に失敗しました'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              '削除',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
         ],
       ),
     );

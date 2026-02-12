@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
-import '../../../core/models/outfit.dart';
-import '../../../core/models/clothing_item.dart';
 import '../providers/outfit_provider.dart';
 import '../widgets/weather_header.dart';
 import '../widgets/outfit_card.dart';
@@ -48,9 +46,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   padding: const EdgeInsets.only(bottom: 24),
                   child: Column(
                     children: [
-                      // Diagnosis CTA
-                      _buildDiagnosisCta(isDark),
-
                       // Weather and context section
                       if (outfitState.proposal != null)
                         WeatherHeader(
@@ -117,7 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Icons.account_circle_outlined,
               color: isDark ? Colors.white : AppColors.textPrimary,
             ),
-            onPressed: () {},
+            onPressed: () => context.goSettings(),
           ),
 
           // Title
@@ -137,7 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Icons.calendar_today_outlined,
               color: isDark ? Colors.white : AppColors.textPrimary,
             ),
-            onPressed: () {},
+            onPressed: () => _showCalendarEvents(context, isDark),
           ),
         ],
       ),
@@ -179,110 +174,194 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _handleWearOutfit(BuildContext context) {
-    // TODO: Record outfit selection
+  Future<void> _showCalendarEvents(BuildContext context, bool isDark) async {
+    final apiClient = ref.read(apiClientProvider);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: apiClient.getCalendar(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return SizedBox(
+                height: 200,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'カレンダー情報を取得できませんでした',
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: isDark ? Colors.white70 : AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final data = snapshot.data!;
+            final events = (data['events'] as List?) ?? [];
+            final tpo = data['tpo'] as Map<String, dynamic>? ?? {};
+            final recommendation = tpo['recommendation'] as String? ?? '';
+
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Text(
+                    '今日の予定',
+                    style: AppTextStyles.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // TPO recommendation
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.checkroom,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            recommendation,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Events list
+                  if (events.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          '予定はありません',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: isDark ? Colors.white54 : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...events.map((event) {
+                      final e = event as Map<String, dynamic>;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: _eventTypeColor(e['event_type'] as String? ?? 'other'),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    e['title'] as String? ?? '',
+                                    style: AppTextStyles.bodyLarge.copyWith(
+                                      color: isDark ? Colors.white : AppColors.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${e['start_time'] ?? ''} - ${e['end_time'] ?? ''}',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: isDark ? Colors.white54 : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _eventTypeColor(String type) {
+    switch (type) {
+      case 'client_meeting':
+        return Colors.red;
+      case 'meeting':
+        return Colors.orange;
+      case 'date':
+        return Colors.pink;
+      case 'exercise':
+        return Colors.green;
+      case 'casual':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<void> _handleWearOutfit(BuildContext context) async {
+    final saved = await ref.read(outfitProvider.notifier).saveToHistory();
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('コーデを履歴に保存しました！'),
+      SnackBar(
+        content: Text(saved ? 'コーデを履歴に保存しました！' : '保存に失敗しました'),
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  Widget _buildDiagnosisCta(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primaryLight,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'コーデ診断',
-                      style: AppTextStyles.h3.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'AIがあなたのコーデを採点します',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => context.goDiagnosis(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primary,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt_outlined, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'コーデを診断する',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

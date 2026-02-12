@@ -1,15 +1,10 @@
 """Poltan API - メインエントリーポイント"""
 import os
-import sys
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# MOCK: モックモジュールをパスに追加 - 本番リリース前に削除必須
-# MOCK: これによりbackend/mock/からインポートが可能になる
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # MOCK: パス設定
 
 from api.routes import router
 
@@ -21,21 +16,42 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """アプリケーションのライフサイクル管理"""
-    # 起動時の処理
-    print("🚀 Poltan API starting...")
+    print("Poltan API starting...")
 
-    # MOCK: モックモード警告表示 - 本番リリース前に削除必須
-    from mock import is_mock_mode  # MOCK: インポート
-    if is_mock_mode():  # MOCK: モードチェック
-        print("=" * 60)  # MOCK: 警告表示
-        print("⚠️  MOCK MODE ENABLED - DO NOT USE IN PRODUCTION")  # MOCK: 警告表示
-        print("   Set MOCK_MODE=false for production deployment")  # MOCK: 警告表示
-        print("=" * 60)  # MOCK: 警告表示
-    # MOCK: ここまでモック警告処理
+    # Firebase Admin SDK 初期化
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+
+        if not firebase_admin._apps:
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if cred_path:
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred, {
+                    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET", ""),
+                })
+            else:
+                firebase_admin.initialize_app(options={
+                    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET", ""),
+                })
+            print("Firebase Admin SDK initialized successfully")
+    except Exception as e:
+        print(f"Warning: Firebase initialization failed: {e}")
+        print("Some features (Firestore, Storage) may not work.")
+
+    # Vertex AI 初期化
+    try:
+        import vertexai
+        project_id = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+        location = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
+        vertexai.init(project=project_id, location=location)
+        print(f"Vertex AI initialized (project={project_id}, location={location})")
+    except Exception as e:
+        print(f"Warning: Vertex AI initialization failed: {e}")
+        print("AI features (outfit diagnosis) may not work.")
 
     yield
-    # 終了時の処理
-    print("👋 Poltan API shutting down...")
+    print("Poltan API shutting down...")
 
 
 # FastAPIアプリケーション
@@ -48,9 +64,11 @@ app = FastAPI(
 
 
 # CORS設定
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では適切に制限する
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,29 +1,38 @@
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:dio/dio.dart';
 import '../models/outfit.dart';
 import '../models/closet.dart';
 import '../models/clothing_item.dart';
 
+/// Token provider function type
+typedef AccessTokenProvider = Future<String?> Function();
+
 /// API client for Poltan backend
 class ApiClient {
   final Dio _dio;
   final String baseUrl;
+  AccessTokenProvider? _tokenProvider;
 
-  /// Android エミュレータでは 10.0.2.2 でホストマシンにアクセス
+  /// 環境変数 API_BASE_URL または デフォルトURL
   static String get _defaultBaseUrl {
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8000/api/v1';
-      }
-    } catch (_) {}
+    // --dart-define=API_BASE_URL=xxx で指定
+    const envUrl = String.fromEnvironment('API_BASE_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+
+    // 本番URL
+    if (kIsWeb) return 'https://rakufuku-api-1024882237054.asia-northeast1.run.app/api/v1';
+
+    // ローカル開発
     return 'http://localhost:8000/api/v1';
   }
 
   ApiClient({
     String? baseUrl,
     Dio? dio,
+    AccessTokenProvider? tokenProvider,
   })  : baseUrl = baseUrl ?? _defaultBaseUrl,
-        _dio = dio ?? Dio() {
+        _dio = dio ?? Dio(),
+        _tokenProvider = tokenProvider {
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -32,12 +41,38 @@ class ApiClient {
       'Accept': 'application/json',
     };
 
-    // Add logging interceptor for debug
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      logPrint: (log) => print('[API] $log'),
+    // Authorization header interceptor - fetches token on demand
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        if (_tokenProvider != null) {
+          try {
+            final token = await _tokenProvider!();
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('[API] Failed to get access token: $e');
+            }
+          }
+        }
+        return handler.next(options);
+      },
     ));
+
+    // Add logging interceptor for debug
+    if (kDebugMode) {
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (log) => print('[API] $log'),
+      ));
+    }
+  }
+
+  /// トークンプロバイダを設定（各リクエスト時に自動でトークンを取得）
+  void setTokenProvider(AccessTokenProvider? provider) {
+    _tokenProvider = provider;
   }
 
   // ==================== Health Check ====================
@@ -182,6 +217,63 @@ class ApiClient {
       throw ApiException.fromDioError(e);
     }
   }
+
+  Future<void> deleteClosetItem({
+    String userId = 'demo_user',
+    required String itemId,
+  }) async {
+    try {
+      await _dio.delete(
+        '/closet/items/$itemId',
+        queryParameters: {'user_id': userId},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  // ==================== Outfit History ====================
+
+  Future<void> saveOutfitHistory({
+    String userId = 'demo_user',
+    required List<Map<String, dynamic>> items,
+    Map<String, dynamic>? weather,
+    Map<String, dynamic>? tpo,
+    double? score,
+    String? feedback,
+  }) async {
+    try {
+      await _dio.post('/outfit/history', data: {
+        'user_id': userId,
+        'items': items,
+        'weather': weather,
+        'tpo': tpo,
+        'score': score,
+        'feedback': feedback,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getOutfitHistory({
+    String userId = 'demo_user',
+    int limit = 30,
+  }) async {
+    try {
+      final response = await _dio.get('/outfit/history', queryParameters: {
+        'user_id': userId,
+        'limit': limit,
+      });
+      return (response.data['history'] as List<dynamic>)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  // ==================== Bulk Items ====================
 
   Future<Map<String, dynamic>> addClosetItemsBulk({
     String userId = 'demo_user',

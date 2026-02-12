@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/theme.dart';
+import '../../../config/router.dart';
+import '../providers/history_provider.dart';
 
-/// History screen placeholder
-class HistoryScreen extends StatelessWidget {
+/// History screen with real data
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(historyProvider.notifier).fetchHistory();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final historyState = ref.watch(historyProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -32,7 +49,7 @@ class HistoryScreen extends StatelessWidget {
                       Icons.account_circle_outlined,
                       color: isDark ? Colors.white : AppColors.textPrimary,
                     ),
-                    onPressed: () {},
+                    onPressed: () => context.goSettings(),
                   ),
                   Expanded(
                     child: Text(
@@ -43,50 +60,228 @@ class HistoryScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.calendar_today_outlined,
-                      color: isDark ? Colors.white : AppColors.textPrimary,
-                    ),
-                    onPressed: () {},
-                  ),
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
 
-            // Content placeholder
+            // Content
             Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.event_note_outlined,
-                      size: 64,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'コーデ履歴がまだありません',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'おすすめコーデを着て\n履歴を作りましょう',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textMuted,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildContent(historyState, isDark),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildContent(HistoryState state, bool isDark) {
+    // Loading
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Error
+    if (state.error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text(
+                '履歴の読み込みに失敗しました',
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                state.error!,
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => ref.read(historyProvider.notifier).refresh(),
+                child: const Text('再試行'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Empty
+    if (state.entries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_note_outlined, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text(
+              'コーデ履歴がまだありません',
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'おすすめコーデの「これを着る」で\n履歴が追加されます',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Data
+    return RefreshIndicator(
+      onRefresh: () => ref.read(historyProvider.notifier).refresh(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: state.entries.length,
+        itemBuilder: (context, index) {
+          return _HistoryEntryCard(entry: state.entries[index]);
+        },
+      ),
+    );
+  }
+}
+
+class _HistoryEntryCard extends StatelessWidget {
+  final Map<String, dynamic> entry;
+
+  const _HistoryEntryCard({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final items = (entry['items'] as List<dynamic>?) ?? [];
+    final weather = entry['weather'] as Map<String, dynamic>?;
+    final score = (entry['score'] as num?)?.toDouble();
+    final feedback = entry['feedback'] as String?;
+    final wornDate = entry['worn_date'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Date and score row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      wornDate,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (score != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _scoreColor(score).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${score.round()}点',
+                      style: TextStyle(
+                        color: _scoreColor(score),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Weather info
+            if (weather != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.wb_sunny_outlined, size: 16, color: AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Text(
+                    weather['description'] as String? ?? '',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Items as chips
+            if (items.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: items.whereType<Map<String, dynamic>>().map<Widget>((item) {
+                  final name = item['name'] as String? ?? '';
+                  final color = item['color'] as String? ?? '';
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      name.isNotEmpty ? name : color,
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            // Feedback
+            if (feedback != null && feedback.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                feedback,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: isDark ? Colors.white70 : AppColors.textSecondary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _scoreColor(double score) {
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return AppColors.error;
   }
 }

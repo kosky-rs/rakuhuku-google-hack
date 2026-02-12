@@ -37,7 +37,7 @@ class OutfitCard extends StatelessWidget {
         selectedAlternativeIndex < alternatives.length) {
       return '代替コーデ ${selectedAlternativeIndex + 1}';
     }
-    return 'エグゼクティブスタイル';
+    return '今日のおすすめコーデ';
   }
 
   String get _currentSubtitle {
@@ -45,7 +45,9 @@ class OutfitCard extends StatelessWidget {
         selectedAlternativeIndex < alternatives.length) {
       return alternatives[selectedAlternativeIndex].description;
     }
-    return '10:00のプレゼンに最適なコーデ';
+    return recommendation.feedback.isNotEmpty
+        ? recommendation.feedback
+        : 'AIがあなたにぴったりのコーデを選びました';
   }
 
   @override

@@ -49,14 +49,15 @@ class ClosetState {
 /// Closet notifier
 class ClosetNotifier extends StateNotifier<ClosetState> {
   final ApiClient _apiClient;
+  final String _userId;
 
-  ClosetNotifier(this._apiClient) : super(const ClosetState());
+  ClosetNotifier(this._apiClient, this._userId) : super(const ClosetState());
 
   Future<void> fetchCloset() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _apiClient.getCloset();
+      final response = await _apiClient.getCloset(userId: _userId);
       state = state.copyWith(
         items: response.items,
         categories: response.categories,
@@ -81,12 +82,28 @@ class ClosetNotifier extends StateNotifier<ClosetState> {
 
   Future<void> addItem(CreateClothingItemRequest request) async {
     try {
-      final item = await _apiClient.addClosetItem(item: request);
+      final item = await _apiClient.addClosetItem(
+        userId: _userId,
+        item: request,
+      );
       state = state.copyWith(
         items: [...state.items, item],
       );
     } on ApiException catch (e) {
       state = state.copyWith(error: e.message);
+    }
+  }
+
+  Future<bool> deleteItem(String itemId) async {
+    try {
+      await _apiClient.deleteClosetItem(userId: _userId, itemId: itemId);
+      state = state.copyWith(
+        items: state.items.where((item) => item.id != itemId).toList(),
+      );
+      return true;
+    } on ApiException catch (e) {
+      state = state.copyWith(error: e.message);
+      return false;
     }
   }
 
@@ -99,7 +116,8 @@ class ClosetNotifier extends StateNotifier<ClosetState> {
 final closetProvider =
     StateNotifierProvider<ClosetNotifier, ClosetState>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return ClosetNotifier(apiClient);
+  final userId = ref.watch(currentUserIdProvider);
+  return ClosetNotifier(apiClient, userId);
 });
 
 /// Selected category provider
