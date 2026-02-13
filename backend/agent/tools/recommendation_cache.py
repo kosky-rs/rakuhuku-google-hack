@@ -157,13 +157,20 @@ async def cache_recommendations(
     # 翌日0時まで有効
     expires_at = _get_next_midnight()
 
+    # Simplify user_preferences for caching (avoid nested structure issues)
+    simplified_prefs = {
+        "style_scores": user_preferences.get("style_scores", {}),
+        "total_swipes": user_preferences.get("total_swipes", 0),
+        "approve_rate": user_preferences.get("approve_rate", 0.0),
+    }
+
     rec_data = {
         "date": today,
-        "recommendations": recommendations,
+        "recommendations": recommendations,  # Now includes mannequin_image_url (HTTPS URL, safe to store)
         "context": {
             "weather": weather,
             "tpo": tpo,
-            "user_preferences": user_preferences,
+            "user_preferences": simplified_prefs,
         },
         "generation_count": 1,
         "tier_limit_reached": False,
@@ -172,7 +179,7 @@ async def cache_recommendations(
     }
 
     rec_ref.set(rec_data)
-    logger.info(f"Cached recommendations for user {user_id} on {today}")
+    logger.info(f"Cached {len(recommendations)} recommendations for user {user_id} on {today}")
 
 
 async def increment_generation_count(user_id: str, today: str) -> None:
@@ -189,6 +196,22 @@ async def increment_generation_count(user_id: str, today: str) -> None:
     rec_ref.update({
         "generation_count": firestore.Increment(1),
     })
+
+
+# ==================== mannequin_image_url 補完 ====================
+
+
+def ensure_mannequin_image_urls(recommendations: List[Dict]) -> List[Dict]:
+    """
+    各recommendationにmannequin_image_urlフィールドが存在することを保証する。
+    キャッシュから取得した古いデータにフィールドがない場合、空文字で補完。
+    フロントエンドがnull/空文字を検知して組み込みプレースホルダーを表示する。
+    """
+    for rec in recommendations:
+        if "mannequin_image_url" not in rec:
+            rec["mannequin_image_url"] = ""
+
+    return recommendations
 
 
 # ==================== メイン関数 ====================
@@ -234,10 +257,10 @@ async def get_or_generate_daily_recommendations(
     if not force_regenerate:
         cached = await get_cached_recommendations(user_id, today)
         if cached:
-            # generations_remaining = tier_usage["daily_limit"] - tier_usage["today_generations"]
+            recommendations = ensure_mannequin_image_urls(cached["recommendations"])
             return {
                 "date": today,
-                "recommendations": cached["recommendations"],
+                "recommendations": recommendations,
                 "weather": cached["context"]["weather"],
                 "tpo": cached["context"]["tpo"],
                 "generations_remaining": 999,  # 無制限
@@ -257,6 +280,9 @@ async def get_or_generate_daily_recommendations(
 
     logger.info(f"Generating new recommendations for user {user_id}")
     recommendations = await generator_func(user_id, weather, tpo, user_preferences)
+
+    # mannequin_image_url存在保証
+    recommendations = ensure_mannequin_image_urls(recommendations)
 
     # キャッシュ保存（常に更新）
     await cache_recommendations(

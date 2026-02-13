@@ -19,7 +19,7 @@ from agent.integration_helper import (
     generate_daily_outfits_with_cache,
     health_check as agent_health_check,
 )
-from agent.tools.recommendation_cache import TierLimitExceeded
+from agent.tools.recommendation_cache import TierLimitExceeded, ensure_mannequin_image_urls
 from agent.tools.preference_learner import record_swipe
 from agent.tools.firebase_helper import upload_base64_image
 
@@ -569,6 +569,10 @@ async def get_daily_outfit_recommendations(
             force_regenerate=force_regenerate,
             access_token=access_token,
         )
+
+        # mannequin_image_url存在保証（キャッシュ・生成どちらの経路でも）
+        if "recommendations" in result:
+            result["recommendations"] = ensure_mannequin_image_urls(result["recommendations"])
 
         logger.info(
             f"Daily outfits generated for user {request.user_id}, "

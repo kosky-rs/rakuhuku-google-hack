@@ -1,22 +1,42 @@
 """
-Nano Banana (Gemini) Image Generation Tool
+Imagen 4 Fast (Vertex AI) Image Generation Tool
 
-Generates outfit mannequin images using Google Gemini's Nano Banana image generation.
+Generates outfit mannequin images using Vertex AI's Imagen 4 Fast model.
+Images are uploaded to Cloud Storage for efficient caching.
 """
 
 import os
 import logging
+import io
+import uuid
+from datetime import datetime
 from typing import Dict, List
-import google.generativeai as genai
+from google.cloud import aiplatform
+import vertexai
+from vertexai.preview.vision_models import ImageGenerationModel
+from firebase_admin import storage
 
 logger = logging.getLogger(__name__)
 
-# Configure Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Configure Vertex AI (環境変数名・デフォルト値はmain.pyと統一)
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+LOCATION = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
 ENABLE_NANO_BANANA = os.getenv("ENABLE_NANO_BANANA", "false").lower() == "true"
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# Initialize Vertex AI
+_VERTEX_AI_INITIALIZED = False
+
+def _initialize_vertex_ai():
+    """Initialize Vertex AI (skip if already initialized by main.py lifespan)"""
+    global _VERTEX_AI_INITIALIZED
+    if not _VERTEX_AI_INITIALIZED:
+        try:
+            vertexai.init(project=PROJECT_ID, location=LOCATION)
+            logger.info(f"Vertex AI initialized: project={PROJECT_ID}, location={LOCATION}")
+            _VERTEX_AI_INITIALIZED = True
+        except Exception as e:
+            logger.error(f"Failed to initialize Vertex AI: {e}")
+            raise
 
 
 def generate_outfit_mannequin_image(
@@ -26,7 +46,7 @@ def generate_outfit_mannequin_image(
     gender: str = "male",
 ) -> str:
     """
-    Generate a full-body mannequin outfit image using Nano Banana.
+    Generate a full-body mannequin outfit image using Vertex AI Imagen 3.
 
     Args:
         items: List of clothing items with name, category, color
@@ -37,47 +57,67 @@ def generate_outfit_mannequin_image(
     Returns:
         str: Image URL (or placeholder if generation disabled)
     """
-    # If Nano Banana is disabled, return placeholder
+    # If image generation is disabled, return placeholder
     if not ENABLE_NANO_BANANA:
-        return _get_placeholder_image_url(style, gender)
-
-    # If API key is missing, return placeholder
-    if not GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY not set. Using placeholder image.")
+        logger.info("ENABLE_NANO_BANANA=false, using placeholder")
         return _get_placeholder_image_url(style, gender)
 
     try:
+        # Initialize Vertex AI
+        _initialize_vertex_ai()
+
         # Build prompt from items
         prompt = _build_mannequin_prompt(items, weather, style, gender)
+        logger.info(f"🎨 Generating image with Imagen 4 Fast: {prompt[:100]}...")
 
-        # Generate image using Gemini
-        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        # Load Imagen 4 Fast model (latest, faster generation with better quota)
+        model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-001")
 
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                # Image generation parameters
-                temperature=0.7,
-            )
+        # Generate image
+        images = model.generate_images(
+            prompt=prompt,
+            number_of_images=1,
+            aspect_ratio="9:16",  # Vertical for mannequin
+            safety_filter_level="block_some",
+            person_generation="allow_adult",
         )
 
-        # Extract image URL from response
-        if response.candidates and len(response.candidates) > 0:
-            candidate = response.candidates[0]
-            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                for part in candidate.content.parts:
-                    if hasattr(part, 'inline_data'):
-                        # Image is returned as base64 inline data
-                        # For production, upload to Firebase Storage and return URL
-                        # For now, return placeholder
-                        logger.info("Image generated successfully (inline data)")
-                        return _get_placeholder_image_url(style, gender)
+        if images and len(images.images) > 0:
+            image = images.images[0]
 
-        logger.warning("No image generated. Using placeholder.")
+            # Convert image to bytes
+            image_bytes = io.BytesIO()
+            image._pil_image.save(image_bytes, format='PNG')
+            image_bytes.seek(0)
+
+            # Upload to Cloud Storage
+            try:
+                bucket = storage.bucket()
+
+                # Generate unique filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"mannequins/{style}_{gender}_{timestamp}_{uuid.uuid4().hex[:8]}.png"
+
+                blob = bucket.blob(filename)
+                blob.upload_from_file(image_bytes, content_type='image/png')
+
+                # Make public and get URL
+                blob.make_public()
+                public_url = blob.public_url
+
+                logger.info(f"✅ Image uploaded to Cloud Storage: {public_url}")
+                return public_url
+
+            except Exception as upload_error:
+                logger.error(f"Failed to upload to Cloud Storage: {upload_error}")
+                # Fallback to placeholder if upload fails
+                return _get_placeholder_image_url(style, gender)
+
+        logger.warning("⚠️ No image generated. Using placeholder.")
         return _get_placeholder_image_url(style, gender)
 
     except Exception as e:
-        logger.error(f"Failed to generate mannequin image: {e}")
+        logger.error(f"❌ Failed to generate mannequin image with Imagen 4 Fast: {e}")
         return _get_placeholder_image_url(style, gender)
 
 
@@ -87,19 +127,19 @@ def _build_mannequin_prompt(
     style: str,
     gender: str,
 ) -> str:
-    """Build prompt for mannequin image generation"""
+    """Build English prompt for Imagen 3 mannequin image generation"""
 
     # Gender-specific terms
-    gender_term = "男性" if gender == "male" else "女性"
+    gender_term = "male" if gender == "male" else "female"
 
     # Style descriptions
     style_descriptions = {
-        "casual": "カジュアルでリラックスした",
-        "formal": "フォーマルで洗練された",
-        "balanced": "バランスの取れた万能な",
-        "unique": "トレンド感のある個性的な",
+        "casual": "casual and relaxed",
+        "formal": "formal and sophisticated",
+        "balanced": "balanced and versatile",
+        "unique": "trendy and unique",
     }
-    style_desc = style_descriptions.get(style, "ベーシックな")
+    style_desc = style_descriptions.get(style, "basic")
 
     # Build item list
     item_descriptions = []
@@ -111,59 +151,41 @@ def _build_mannequin_prompt(
         if name:
             item_descriptions.append(f"- {name}")
         elif color and category:
-            item_descriptions.append(f"- {color}の{category}")
+            item_descriptions.append(f"- {color} {category}")
 
-    items_text = "\n".join(item_descriptions) if item_descriptions else "ベーシックなコーディネート"
+    items_text = "\n".join(item_descriptions) if item_descriptions else "basic outfit"
 
     # Temperature context
     temp = weather.get("temperature", 20)
     temp_context = ""
     if temp < 10:
-        temp_context = f"（気温{temp}°C：防寒重視）"
+        temp_context = f" (cold weather: {temp}°C)"
     elif temp > 25:
-        temp_context = f"（気温{temp}°C：涼しげ）"
+        temp_context = f" (hot weather: {temp}°C)"
 
-    # Build full prompt
+    # Build full prompt for Imagen 3 (English)
     prompt = f"""
-ファッションコーディネート用の全身マネキン画像を生成してください。
+A full-body fashion mannequin wearing a {style_desc} {gender_term} outfit{temp_context}.
 
-【スタイル】{style_desc}{gender_term}向けコーディネート{temp_context}
-
-【着用アイテム】
+Outfit items:
 {items_text}
 
-【要件】
-- 白背景の全身マネキン（顔なし）
-- シンプルで清潔感のあるビジュアル
-- アイテムの色・形が明確にわかる
-- ファッション通販サイトのような商品写真風
-- 余白は最小限に
-"""
+Style requirements:
+- Clean white background
+- Full-body mannequin without face
+- Simple and professional product photography style
+- Clear visibility of all clothing items and colors
+- Fashion e-commerce catalog style
+- Minimal margins
+- Photorealistic rendering
+""".strip()
 
-    return prompt.strip()
+    return prompt
 
 
 def _get_placeholder_image_url(style: str, gender: str) -> str:
     """
-    Get placeholder image URL based on style and gender.
-
-    For production, these should be actual hosted images.
-    For now, returning placeholder service URLs.
+    Return empty string as placeholder when image generation fails.
+    Frontend handles empty/null mannequin_image_url with a built-in placeholder widget.
     """
-    # Use placeholder service with custom colors based on style
-    style_colors = {
-        "casual": "3498db",  # Blue
-        "formal": "2c3e50",  # Dark gray
-        "balanced": "27ae60",  # Green
-        "unique": "e74c3c",  # Red
-    }
-
-    color = style_colors.get(style, "95a5a6")
-
-    # Gender icon
-    gender_icon = "👔" if gender == "male" else "👗"
-
-    # Placeholder image URL (800x1200 for mannequin aspect ratio)
-    placeholder_url = f"https://via.placeholder.com/800x1200/{color}/ffffff?text={gender_icon}+{style.upper()}"
-
-    return placeholder_url
+    return ""

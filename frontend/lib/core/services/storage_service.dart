@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +13,8 @@ class StorageService {
   /// Returns the download URL of the uploaded image
   /// Throws [FirebaseException] if upload fails
   Future<String> uploadClothingImage(String localPath, String userId) async {
-    final file = File(localPath);
+    final xFile = XFile(localPath);
+    final bytes = await xFile.readAsBytes();
 
     // Generate unique filename: timestamp_random.jpg
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -24,9 +25,9 @@ class StorageService {
     final storagePath = 'closet_images/$userId/$fileName';
     final ref = _storage.ref().child(storagePath);
 
-    // Upload file
-    final uploadTask = ref.putFile(
-      file,
+    // Upload bytes (works on both web and native)
+    final uploadTask = ref.putData(
+      bytes,
       SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {
@@ -54,7 +55,6 @@ class StorageService {
       await ref.delete();
       return true;
     } on FirebaseException catch (e) {
-      // Log error but don't throw
       print('[StorageService] Failed to delete image: ${e.message}');
       return false;
     }

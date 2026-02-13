@@ -142,6 +142,14 @@ class OutfitOrchestrator:
                 # Add placeholder on failure
                 outfit["mannequin_image_url"] = self._get_placeholder_image_url(agent_type, gender)
 
+        # Final guarantee: ensure every outfit has mannequin_image_url
+        for outfit in top_5:
+            if not outfit.get("mannequin_image_url"):
+                outfit["mannequin_image_url"] = self._get_placeholder_image_url(
+                    outfit.get("agent_type", "casual"),
+                    user_preferences.get("gender", "male"),
+                )
+
         return top_5
 
     def _select_top_recommendations(
@@ -211,26 +219,10 @@ class OutfitOrchestrator:
 
     def _get_placeholder_image_url(self, style: str, gender: str) -> str:
         """
-        Get placeholder image URL based on style and gender.
-        Fallback method when nano_banana is not available.
+        Return empty string as placeholder when image generation fails.
+        Frontend handles empty/null mannequin_image_url with a built-in placeholder widget.
         """
-        style_colors = {
-            "casual": "3498db",  # Blue
-            "formal": "2c3e50",  # Dark gray
-            "balanced": "27ae60",  # Green
-            "unique": "e74c3c",  # Red
-        }
-
-        color = style_colors.get(style, "95a5a6")
-        gender_text = "MEN" if gender == "male" else "WOMEN"
-
-        # Placeholder image URL (800x1200 for mannequin aspect ratio)
-        # URL-encode the text to avoid issues
-        import urllib.parse
-        text = urllib.parse.quote(f"{gender_text} {style.upper()}")
-        placeholder_url = f"https://via.placeholder.com/800x1200/{color}/ffffff?text={text}"
-
-        return placeholder_url
+        return ""
 
     def _ensure_agent_diversity(self, outfits: List[Dict]) -> List[Dict]:
         """

@@ -32,30 +32,30 @@ class EnhancedOutfitCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header with theme badge
-          _buildHeader(isDark),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header with theme badge
+            _buildHeader(isDark),
 
-          // Mannequin image (main visual)
-          Expanded(
-            child: _buildMannequinImage(isDark),
-          ),
+            // Mannequin image (main visual)
+            _buildMannequinImage(isDark),
 
-          // Items list (compact)
-          _buildItemsList(isDark),
+            // Items list (compact)
+            _buildItemsList(isDark),
 
-          // AI Score section
-          _buildAIScoreSection(isDark),
+            // AI Score section
+            _buildAIScoreSection(isDark),
 
-          // Reasoning section
-          _buildReasoningSection(isDark),
+            // Reasoning section
+            _buildReasoningSection(isDark),
 
-          // Source indicator
-          if (recommendation.source != 'closet')
-            _buildSourceIndicator(isDark),
-        ],
+            // Source indicator
+            if (recommendation.source != 'closet')
+              _buildSourceIndicator(isDark),
+          ],
+        ),
       ),
     ),
     );
@@ -174,6 +174,7 @@ class EnhancedOutfitCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      height: 360,
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.backgroundDark.withOpacity(0.5)

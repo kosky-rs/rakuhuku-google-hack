@@ -495,7 +495,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           // Header: Today's Outfit with Close Button
           Container(
-            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
@@ -511,48 +510,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ],
             ),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
               children: [
-                // Close button row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () {
-                        ref.read(dailyRecommendationProvider.notifier).reset();
-                      },
-                      tooltip: '他のコーデを見る',
+                const Icon(Icons.check_circle, color: Colors.white, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '今日のコーデ',
+                    style: AppTextStyles.h3.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
+                  ),
                 ),
-                // Main header content
-                Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white, size: 40),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '今日のコーデ',
-                            style: AppTextStyles.h3.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '素敵な一日を！',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                  onPressed: () {
+                    ref.read(dailyRecommendationProvider.notifier).reset();
+                  },
+                  tooltip: '他のコーデを見る',
                 ),
               ],
             ),
@@ -566,9 +543,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           const SizedBox(height: 16),
 
-          // Mannequin Image
-          if (outfit.mannequinImageUrl != null && outfit.mannequinImageUrl!.isNotEmpty)
-            _buildMannequinImageSection(outfit.mannequinImageUrl!, isDark),
+          // Mannequin Image (always show section)
+          _buildMannequinImageSection(
+            outfit.mannequinImageUrl,
+            isDark,
+          ),
 
           const SizedBox(height: 16),
 
@@ -655,7 +634,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildMannequinImageSection(String imageUrl, bool isDark) {
+  Widget _buildMannequinImageSection(String? imageUrl, bool isDark) {
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       height: 400,
@@ -674,40 +655,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.contain,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
-              child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            );
-          },
-          errorBuilder: (_, __, ___) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.checkroom_outlined,
-                  size: 80,
-                  color: AppColors.textMuted,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'コーディネート画像',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
+        child: hasImage
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => _buildImagePlaceholder(isDark),
+              )
+            : _buildImagePlaceholder(isDark),
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.checkroom_outlined,
+            size: 80,
+            color: AppColors.textMuted,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'コーディネート画像',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textMuted,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

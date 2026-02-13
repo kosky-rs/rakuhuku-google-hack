@@ -47,7 +47,7 @@ deploy_backend() {
     --region "${REGION}" \
     --platform managed \
     --allow-unauthenticated \
-    --set-env-vars "^##^ENVIRONMENT=production##GCP_PROJECT_ID=${PROJECT_ID}##VERTEX_AI_LOCATION=asia-northeast1##ALLOWED_ORIGINS=https://${PROJECT_ID}.web.app,https://${PROJECT_ID}.firebaseapp.com##FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.appspot.com" \
+    --set-env-vars "^##^ENVIRONMENT=production##GCP_PROJECT_ID=${PROJECT_ID}##VERTEX_AI_LOCATION=asia-northeast1##ALLOWED_ORIGINS=https://${PROJECT_ID}.web.app,https://${PROJECT_ID}.firebaseapp.com##FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.firebasestorage.app##ENABLE_NANO_BANANA=true" \
     --set-secrets "OPENWEATHER_API_KEY=openweather-api-key:latest" \
     --memory 512Mi \
     --cpu 1 \
