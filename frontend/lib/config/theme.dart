@@ -8,6 +8,7 @@ class AppColors {
   static const Color primary = Color(0xFF136DEC);
   static const Color primaryLight = Color(0xFF4A8FF0);
   static const Color primaryDark = Color(0xFF0D5AC0);
+  static const Color secondary = Color(0xFF617289); // Secondary brand color
 
   // Background colors
   static const Color backgroundLight = Color(0xFFF6F7F8);
@@ -91,6 +92,13 @@ class AppTextStyles {
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.05,
+  );
+
+  static const TextStyle labelMedium = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.1,
   );
 
   static const TextStyle labelSmall = TextStyle(

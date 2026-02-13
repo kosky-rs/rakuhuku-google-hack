@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
 import '../../../core/providers/user_provider.dart';
-import '../../../core/models/user_profile.dart';
-import '../../onboarding/widgets/style_preference_selector.dart';
 
 /// Settings screen
 class SettingsScreen extends ConsumerWidget {
@@ -63,39 +61,6 @@ class SettingsScreen extends ConsumerWidget {
                         title: 'プロフィール',
                         subtitle: 'プロフィールを確認・編集',
                         onTap: () => context.goProfileView(),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.notifications_outlined,
-                        title: '通知',
-                        subtitle: '通知の管理',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  _buildSection(
-                    context,
-                    '環境設定',
-                    [
-                      _SettingsTile(
-                        icon: Icons.location_on_outlined,
-                        title: '位置情報と天気',
-                        subtitle: '位置情報を設定',
-                        onTap: () {},
-                      ),
-                      _SettingsTile(
-                        icon: Icons.palette_outlined,
-                        title: 'スタイルの好み',
-                        subtitle: userState.profile?.stylePreference?.label ?? 'スタイルをカスタマイズ',
-                        onTap: () => _showStylePreferenceSheet(context, ref, userState),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.calendar_today_outlined,
-                        title: 'カレンダー連携',
-                        subtitle: 'Googleカレンダーと連携済み',
-                        onTap: () {},
                       ),
                     ],
                   ),
@@ -156,54 +121,6 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showStylePreferenceSheet(BuildContext context, WidgetRef ref, UserState userState) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: AppColors.backgroundDark,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: AppColors.textMuted,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: StylePreferenceSelector(
-                  selectedStyle: userState.profile?.stylePreference,
-                  onSelected: (style) {
-                    ref.read(userProvider.notifier).updateOnboardingData(
-                      stylePreference: style,
-                    );
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('スタイルを「${style.label}」に変更しました'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                ),
               ),
             ),
           ],

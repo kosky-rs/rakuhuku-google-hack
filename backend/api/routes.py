@@ -669,3 +669,61 @@ async def multi_agent_health_check():
             "status": "unhealthy",
             "error": str(e)
         }
+
+
+@router.delete("/outfit/cache")
+async def clear_recommendation_cache(
+    user_id: str = "demo_user",
+    date: Optional[str] = None,
+):
+    """
+    日次推奨キャッシュをクリア（開発・テスト用）
+
+    Args:
+        user_id: User ID
+        date: Date to clear (YYYY-MM-DD). Defaults to today.
+
+    Returns:
+        {"message": "Cache cleared", "date": str}
+    """
+    from datetime import datetime as _dt
+    from firebase_admin import firestore
+
+    target_date = date or _dt.now().date().isoformat()
+
+    try:
+        db = firestore.client()
+
+        # Delete daily_recommendations cache
+        cache_ref = db.collection("users").document(user_id).collection("daily_recommendations").document(target_date)
+        cache_doc = cache_ref.get()
+
+        if cache_doc.exists:
+            cache_ref.delete()
+            logger.info(f"Cleared cache for user {user_id} on {target_date}")
+
+        # Reset tier usage counter for today
+        if target_date == _dt.now().date().isoformat():
+            tier_ref = db.collection("users").document(user_id).collection("tier_usage").document("current")
+            tier_doc = tier_ref.get()
+
+            if tier_doc.exists:
+                tier_ref.update({
+                    "today_date": target_date,
+                    "today_generations": 0,
+                })
+                logger.info(f"Reset tier usage for user {user_id}")
+
+        return {
+            "message": "Cache cleared successfully",
+            "user_id": user_id,
+            "date": target_date,
+            "cache_existed": cache_doc.exists,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to clear cache: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "キャッシュのクリアに失敗しました", "error": str(e)}
+        )

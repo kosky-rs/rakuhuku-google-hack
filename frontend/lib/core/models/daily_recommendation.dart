@@ -173,6 +173,26 @@ class Weather {
       'description': description,
     };
   }
+
+  String get temperatureDisplay => '${temperature.round()}°C';
+
+  String get icon {
+    switch (condition.toLowerCase()) {
+      case 'clear':
+        return 'wb_sunny';
+      case 'clouds':
+      case 'cloudy':
+        return 'cloud';
+      case 'rain':
+        return 'rainy';
+      case 'snow':
+        return 'ac_unit';
+      case 'thunderstorm':
+        return 'thunderstorm';
+      default:
+        return 'wb_sunny';
+    }
+  }
 }
 
 /// TPO情報

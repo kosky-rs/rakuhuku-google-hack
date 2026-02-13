@@ -85,13 +85,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.search,
-                    color: isDark ? Colors.white : AppColors.textPrimary,
-                  ),
-                  onPressed: () {},
-                ),
+                const SizedBox(width: 48),
               ],
             ),
           ),
