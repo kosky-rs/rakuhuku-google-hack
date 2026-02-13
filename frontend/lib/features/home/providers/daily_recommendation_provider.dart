@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/models/daily_recommendation.dart';
+import '../../../core/models/clothing_item.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/auth_service.dart';
 
