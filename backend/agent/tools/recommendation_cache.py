@@ -234,22 +234,22 @@ async def get_or_generate_daily_recommendations(
     if not force_regenerate:
         cached = await get_cached_recommendations(user_id, today)
         if cached:
-            generations_remaining = tier_usage["daily_limit"] - tier_usage["today_generations"]
+            # generations_remaining = tier_usage["daily_limit"] - tier_usage["today_generations"]
             return {
                 "date": today,
                 "recommendations": cached["recommendations"],
                 "weather": cached["context"]["weather"],
                 "tpo": cached["context"]["tpo"],
-                "generations_remaining": generations_remaining,
-                "can_regenerate": generations_remaining > 0,
+                "generations_remaining": 999,  # 無制限
+                "can_regenerate": True,  # 常に再生成可能
             }
 
-    # Tier制限チェック
-    if tier_usage["today_generations"] >= tier_usage["daily_limit"]:
-        logger.warning(f"Tier limit exceeded for user {user_id}")
-        raise TierLimitExceeded(
-            f"Daily generation limit reached ({tier_usage['daily_limit']} generations per day)"
-        )
+    # Tier制限チェック（一時的に無効化）
+    # if tier_usage["today_generations"] >= tier_usage["daily_limit"]:
+    #     logger.warning(f"Tier limit exceeded for user {user_id}")
+    #     raise TierLimitExceeded(
+    #         f"Daily generation limit reached ({tier_usage['daily_limit']} generations per day)"
+    #     )
 
     # 新規生成
     if generator_func is None:
@@ -271,15 +271,15 @@ async def get_or_generate_daily_recommendations(
     # Tier使用カウント増加
     await increment_tier_usage(user_id, today)
 
-    # 残り生成回数計算
+    # 残り生成回数計算（制限なし設定）
     tier_usage = await get_tier_usage(user_id, today)
-    generations_remaining = tier_usage["daily_limit"] - tier_usage["today_generations"]
+    # generations_remaining = tier_usage["daily_limit"] - tier_usage["today_generations"]
 
     return {
         "date": today,
         "recommendations": recommendations,
         "weather": weather,
         "tpo": tpo,
-        "generations_remaining": generations_remaining,
-        "can_regenerate": generations_remaining > 0,
+        "generations_remaining": 999,  # 無制限
+        "can_regenerate": True,  # 常に再生成可能
     }

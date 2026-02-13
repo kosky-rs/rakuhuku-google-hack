@@ -70,26 +70,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onPressed: () => context.goProfileView(),
           ),
 
-          // Title with generation count
+          // Title (removed generation count)
           Expanded(
-            child: Column(
-              children: [
-                Text(
-                  'Rakufuku',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.textPrimary,
-                  ),
-                ),
-                if (dailyRecState.dailyRec != null)
-                  Text(
-                    '残り生成回数: ${dailyRecState.generationsRemaining}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: isDark ? Colors.white70 : AppColors.textSecondary,
-                    ),
-                  ),
-              ],
+            child: Text(
+              'Rakufuku',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.textPrimary,
+              ),
             ),
+          ),
+
+          // Regenerate button
+          IconButton(
+            icon: Icon(
+              Icons.refresh,
+              color: dailyRecState.isLoading
+                  ? Colors.grey
+                  : AppColors.primary,
+            ),
+            onPressed: dailyRecState.isLoading
+                ? null
+                : () {
+                    ref.read(dailyRecommendationProvider.notifier).regenerate();
+                  },
+            tooltip: 'コーデを再生成',
           ),
 
           // Calendar button
@@ -317,33 +322,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              '残り生成回数: ${state.generationsRemaining}',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: isDark ? Colors.white70 : AppColors.textSecondary,
-              ),
-            ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: state.canRegenerate
-                  ? () => ref.read(dailyRecommendationProvider.notifier).regenerate()
-                  : null,
+              onPressed: () => ref.read(dailyRecommendationProvider.notifier).regenerate(),
               icon: const Icon(Icons.refresh),
               label: const Text('新しいコーデを生成'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
             ),
-            if (!state.canRegenerate) ...[
-              const SizedBox(height: 16),
-              Text(
-                '本日の生成回数上限に達しました',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.error,
-                ),
-              ),
-            ],
           ],
         ),
       ),
