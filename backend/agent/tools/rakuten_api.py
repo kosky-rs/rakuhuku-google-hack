@@ -251,6 +251,185 @@ def _get_category_japanese(category: str) -> str:
     return category_map.get(category, "ファッション")
 
 
+def generate_natural_language_item(
+    category: str,
+    weather: Dict,
+    agent_style: str = "casual",
+    gender: str = "male",
+) -> Dict:
+    """
+    Generate natural language outfit item recommendation
+
+    Args:
+        category: Category (tops, bottoms, outerwear, shoes, accessories)
+        weather: Weather context
+        agent_style: Agent style (casual, formal, balanced, unique)
+        gender: Gender (male, female)
+
+    Returns:
+        Dict: Natural language item with generic marketplace links
+    """
+    temp = weather.get("temperature", 20)
+    condition = weather.get("condition", "晴れ")
+
+    # Style-based item recommendations
+    style_recommendations = {
+        "casual": {
+            "tops": {
+                "male": ["白のカジュアルシャツ", "グレーのTシャツ", "ネイビーのポロシャツ"],
+                "female": ["白のブラウス", "ベージュのニット", "ストライプのシャツ"],
+            },
+            "bottoms": {
+                "male": ["デニムパンツ", "ベージュのチノパン", "グレーのスラックス"],
+                "female": ["デニムスカート", "ベージュのワイドパンツ", "カーキのチノパン"],
+            },
+            "outerwear": {
+                "male": ["ネイビーのジャケット", "グレーのカーディガン", "ベージュのブルゾン"],
+                "female": ["ベージュのトレンチコート", "グレーのカーディガン", "ネイビーのジャケット"],
+            },
+            "shoes": {
+                "male": ["白のスニーカー", "ブラウンのローファー", "グレーのスリッポン"],
+                "female": ["白のスニーカー", "ベージュのパンプス", "ブラウンのローファー"],
+            },
+            "accessories": {
+                "male": ["シンプルな腕時計", "ベージュのトートバッグ", "ブラウンのベルト"],
+                "female": ["ゴールドのネックレス", "ベージュのトートバッグ", "シンプルなピアス"],
+            },
+        },
+        "formal": {
+            "tops": {
+                "male": ["白のドレスシャツ", "ライトブルーのワイシャツ", "グレーのニットベスト"],
+                "female": ["白のブラウス", "ネイビーのシャツ", "ベージュのカシミアニット"],
+            },
+            "bottoms": {
+                "male": ["ネイビーのスラックス", "チャコールグレーのパンツ", "黒のドレスパンツ"],
+                "female": ["黒のタイトスカート", "ネイビーのスラックス", "グレーのフレアパンツ"],
+            },
+            "outerwear": {
+                "male": ["ネイビーのテーラードジャケット", "チャコールグレーのブレザー", "黒のスーツジャケット"],
+                "female": ["ネイビーのテーラードジャケット", "ベージュのジャケット", "黒のブレザー"],
+            },
+            "shoes": {
+                "male": ["黒の革靴", "ブラウンのストレートチップ", "ネイビーのローファー"],
+                "female": ["黒のパンプス", "ベージュのヒール", "ネイビーのローファー"],
+            },
+            "accessories": {
+                "male": ["シルバーの腕時計", "黒のレザーバッグ", "ネイビーのネクタイ"],
+                "female": ["パールのネックレス", "黒のレザーバッグ", "シルバーのピアス"],
+            },
+        },
+        "balanced": {
+            "tops": {
+                "male": ["白のオックスフォードシャツ", "ライトグレーのニット", "ネイビーのポロシャツ"],
+                "female": ["白のシャツブラウス", "グレーのカーディガン", "ベージュのニット"],
+            },
+            "bottoms": {
+                "male": ["ネイビーのチノパン", "グレーのスラックス", "ダークデニム"],
+                "female": ["ネイビーのパンツ", "ベージュのスカート", "グレーのワイドパンツ"],
+            },
+            "outerwear": {
+                "male": ["ネイビーのジャケット", "グレーのブレザー", "ベージュのコート"],
+                "female": ["ベージュのジャケット", "グレーのカーディガン", "ネイビーのコート"],
+            },
+            "shoes": {
+                "male": ["ブラウンの革靴", "ネイビーのローファー", "ダークグレーのスニーカー"],
+                "female": ["ベージュのパンプス", "ブラウンのローファー", "白のスニーカー"],
+            },
+            "accessories": {
+                "male": ["シンプルな腕時計", "ブラウンのレザーバッグ", "ネイビーのベルト"],
+                "female": ["ゴールドのネックレス", "ベージュのバッグ", "シンプルなピアス"],
+            },
+        },
+        "unique": {
+            "tops": {
+                "male": ["トレンドカラーのシャツ", "柄物のニット", "個性的なデザインのTシャツ"],
+                "female": ["トレンドカラーのブラウス", "柄物のニット", "個性的なデザインのトップス"],
+            },
+            "bottoms": {
+                "male": ["カラーパンツ", "柄物のスラックス", "デザイン性のあるデニム"],
+                "female": ["カラースカート", "柄物のパンツ", "デザイン性のあるデニム"],
+            },
+            "outerwear": {
+                "male": ["トレンドカラーのジャケット", "デザイン性のあるコート", "個性的なブルゾン"],
+                "female": ["トレンドカラーのコート", "デザイン性のあるジャケット", "個性的なカーディガン"],
+            },
+            "shoes": {
+                "male": ["カラースニーカー", "デザイン性のあるローファー", "トレンドのブーツ"],
+                "female": ["カラーパンプス", "デザイン性のあるブーツ", "トレンドのスニーカー"],
+            },
+            "accessories": {
+                "male": ["個性的な腕時計", "デザイナーズバッグ", "トレンドのアクセサリー"],
+                "female": ["トレンドのネックレス", "デザイナーズバッグ", "個性的なピアス"],
+            },
+        },
+    }
+
+    # Temperature-based adjustments
+    if temp < 10:
+        # Cold weather - add warmth descriptors
+        warmth_descriptors = {
+            "tops": "厚手の",
+            "outerwear": "防寒性の高い",
+            "bottoms": "裏起毛の",
+        }
+    elif temp > 25:
+        # Hot weather - add breathability descriptors
+        warmth_descriptors = {
+            "tops": "通気性の良い",
+            "outerwear": "軽量な",
+            "bottoms": "薄手の",
+        }
+    else:
+        warmth_descriptors = {}
+
+    # Get base recommendation
+    style_category = style_recommendations.get(agent_style, style_recommendations["casual"])
+    category_items = style_category.get(category, {})
+    gender_items = category_items.get(gender, category_items.get("male", []))
+
+    # Select item (rotate based on temperature for variety)
+    item_index = int(temp) % len(gender_items) if gender_items else 0
+    base_item_name = gender_items[item_index] if gender_items else "ベーシックなアイテム"
+
+    # Add temperature descriptor if applicable
+    descriptor = warmth_descriptors.get(category, "")
+    if descriptor:
+        item_name = f"{descriptor}{base_item_name}"
+    else:
+        item_name = base_item_name
+
+    # Generate item with generic marketplace links
+    return {
+        "id": f"nl_{category}_{agent_style}",
+        "name": item_name,
+        "category": category,
+        "color": _extract_color_from_name(item_name),
+        "description": f"{item_name}（{agent_style}スタイル）",
+        "source": "natural_language",
+        "marketplace_links": [
+            {
+                "platform": "楽天市場",
+                "url": "https://www.rakuten.co.jp/",
+                "search_query": item_name,
+            },
+            {
+                "platform": "Amazon",
+                "url": "https://www.amazon.co.jp/",
+                "search_query": item_name,
+            },
+        ],
+    }
+
+
+def _extract_color_from_name(item_name: str) -> str:
+    """Extract color from item name"""
+    colors = ["白", "黒", "グレー", "ネイビー", "ベージュ", "ブラウン", "カーキ", "ライトブルー", "チャコールグレー", "ダーク"]
+    for color in colors:
+        if color in item_name:
+            return color
+    return "ベーシック"
+
+
 async def supplement_outfit_with_rakuten(
     outfit: Dict,
     missing_categories: List[str],
@@ -258,10 +437,10 @@ async def supplement_outfit_with_rakuten(
     gender: str = "male",
 ) -> Dict:
     """
-    Supplement outfit with Rakuten products for missing categories
+    Supplement outfit with natural language item recommendations
 
-    When closet lacks certain category items, this function searches
-    Rakuten for suitable products to complete the outfit.
+    Generates descriptive outfit items with generic marketplace links
+    instead of calling Rakuten API.
 
     Args:
         outfit: Existing outfit dictionary
@@ -270,42 +449,40 @@ async def supplement_outfit_with_rakuten(
         gender: Gender for product filtering (male/female)
 
     Returns:
-        Dict: Updated outfit with external products supplemented
+        Dict: Updated outfit with natural language items supplemented
     """
     if not missing_categories:
         return outfit
 
-    logger.info(f"Supplementing outfit with Rakuten for missing categories: {missing_categories}")
+    logger.info(f"Generating natural language items for missing categories: {missing_categories}")
 
-    # Initialize external_products list if not exists
-    if 'external_products' not in outfit:
-        outfit['external_products'] = []
+    # Get agent style from outfit
+    agent_style = outfit.get("agent_type", "casual")
 
-    # Determine base style for consistent recommendations
-    base_style = "ベーシック"  # Default to basic style for consistency
+    # Initialize items list if not exists
+    if 'items' not in outfit:
+        outfit['items'] = []
 
-    # Search for each missing category
+    # Generate natural language item for each missing category
     for category in missing_categories:
         try:
-            products = await search_rakuten_products(
+            item = generate_natural_language_item(
                 category=category,
-                style=base_style,
+                weather=weather,
+                agent_style=agent_style,
                 gender=gender,
-                max_results=1,  # Take only the best match
             )
 
-            if products:
-                # Add the product to external products
-                outfit['external_products'].append(products[0])
-                logger.info(f"Added Rakuten product for {category}: {products[0].get('name', 'N/A')}")
+            outfit['items'].append(item)
+            logger.info(f"Added natural language item for {category}: {item['name']}")
 
         except Exception as e:
-            logger.error(f"Failed to supplement category {category}: {e}")
+            logger.error(f"Failed to generate item for category {category}: {e}")
             continue
 
-    # Update source to hybrid if we added external products
-    if outfit['external_products']:
-        outfit['source'] = 'hybrid'  # closet + external
+    # Update source to natural_language
+    if outfit['items']:
+        outfit['source'] = 'natural_language'
 
     return outfit
 

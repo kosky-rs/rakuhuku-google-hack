@@ -12,6 +12,9 @@ class ClothingItem {
   final int usageScore;
   final DateTime? lastWornAt;
   final DateTime createdAt;
+  final String? description;
+  final String? source;
+  final List<MarketplaceLink>? marketplaceLinks;
 
   const ClothingItem({
     required this.id,
@@ -26,6 +29,9 @@ class ClothingItem {
     this.usageScore = 0,
     this.lastWornAt,
     required this.createdAt,
+    this.description,
+    this.source,
+    this.marketplaceLinks,
   });
 
   factory ClothingItem.fromJson(Map<String, dynamic> json) {
@@ -51,6 +57,13 @@ class ClothingItem {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      description: json['description'] as String?,
+      source: json['source'] as String?,
+      marketplaceLinks: json['marketplace_links'] != null
+          ? (json['marketplace_links'] as List<dynamic>)
+              .map((e) => MarketplaceLink.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : null,
     );
   }
 
@@ -68,6 +81,10 @@ class ClothingItem {
       'usage_score': usageScore,
       'last_worn_at': lastWornAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
+      if (description != null) 'description': description,
+      if (source != null) 'source': source,
+      if (marketplaceLinks != null)
+        'marketplace_links': marketplaceLinks!.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -84,6 +101,9 @@ class ClothingItem {
     int? usageScore,
     DateTime? lastWornAt,
     DateTime? createdAt,
+    String? description,
+    String? source,
+    List<MarketplaceLink>? marketplaceLinks,
   }) {
     return ClothingItem(
       id: id ?? this.id,
@@ -98,7 +118,39 @@ class ClothingItem {
       usageScore: usageScore ?? this.usageScore,
       lastWornAt: lastWornAt ?? this.lastWornAt,
       createdAt: createdAt ?? this.createdAt,
+      description: description ?? this.description,
+      source: source ?? this.source,
+      marketplaceLinks: marketplaceLinks ?? this.marketplaceLinks,
     );
+  }
+}
+
+/// Marketplace link model for natural language recommendations
+class MarketplaceLink {
+  final String platform;
+  final String url;
+  final String? searchQuery;
+
+  const MarketplaceLink({
+    required this.platform,
+    required this.url,
+    this.searchQuery,
+  });
+
+  factory MarketplaceLink.fromJson(Map<String, dynamic> json) {
+    return MarketplaceLink(
+      platform: json['platform'] as String,
+      url: json['url'] as String,
+      searchQuery: json['search_query'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'platform': platform,
+      'url': url,
+      if (searchQuery != null) 'search_query': searchQuery,
+    };
   }
 }
 
