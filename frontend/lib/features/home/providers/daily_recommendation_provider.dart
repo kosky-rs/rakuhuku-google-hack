@@ -55,6 +55,7 @@ class DailyRecommendationState {
     bool? allRejected,
     bool? isTierLimited,
     OutfitRecommendation? selectedTodayOutfit,
+    bool clearSelectedOutfit = false,
   }) {
     return DailyRecommendationState(
       dailyRec: dailyRec ?? this.dailyRec,
@@ -63,7 +64,7 @@ class DailyRecommendationState {
       currentCardIndex: currentCardIndex ?? this.currentCardIndex,
       allRejected: allRejected ?? this.allRejected,
       isTierLimited: isTierLimited ?? this.isTierLimited,
-      selectedTodayOutfit: selectedTodayOutfit ?? this.selectedTodayOutfit,
+      selectedTodayOutfit: clearSelectedOutfit ? null : (selectedTodayOutfit ?? this.selectedTodayOutfit),
     );
   }
 }
@@ -174,7 +175,12 @@ class DailyRecommendationNotifier
   Future<void> regenerate() async {
     if (!state.canRegenerate) return;
 
-    state = state.copyWith(isLoading: true, error: null, isTierLimited: false);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      isTierLimited: false,
+      clearSelectedOutfit: true, // Reset selected outfit when regenerating
+    );
 
     try {
       final dailyRec = await _apiClient.regenerateOutfits(
@@ -186,6 +192,7 @@ class DailyRecommendationNotifier
         currentCardIndex: 0,
         allRejected: false,
         isTierLimited: false,
+        clearSelectedOutfit: true, // Ensure it stays cleared
       );
     } on ApiException catch (e) {
       state = state.copyWith(
@@ -210,8 +217,14 @@ class DailyRecommendationNotifier
     required int index,
     required OutfitRecommendation outfit,
   }) async {
+    // Update state immediately - mark as selected
+    state = state.copyWith(
+      allRejected: false,
+      selectedTodayOutfit: outfit,
+    );
+
     try {
-      // Record the swipe as approval
+      // Record the swipe as approval (async - don't block UI)
       await recordSwipe(
         outfitId: outfit.id,
         action: 'approve',
@@ -223,14 +236,9 @@ class DailyRecommendationNotifier
           'agent_type': outfit.agentType,
         },
       );
-
-      // Update state - mark as selected and save outfit
-      state = state.copyWith(
-        allRejected: false,
-        selectedTodayOutfit: outfit,
-      );
     } catch (e) {
-      // Silent fail - user already saw celebration dialog
+      // Log error but don't revert state - user already saw celebration dialog
+      print('Failed to record swipe: $e');
     }
   }
 
@@ -239,9 +247,13 @@ class DailyRecommendationNotifier
     state = state.copyWith(allRejected: true);
   }
 
-  /// Reset to first card
+  /// Reset to first card and clear selected outfit
   void reset() {
-    state = state.copyWith(currentCardIndex: 0, allRejected: false);
+    state = state.copyWith(
+      currentCardIndex: 0,
+      allRejected: false,
+      clearSelectedOutfit: true,
+    );
   }
 }
 
