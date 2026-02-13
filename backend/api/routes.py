@@ -101,6 +101,24 @@ async def health_check():
     return {"status": "healthy", "service": "poltan-api"}
 
 
+@router.post("/debug/clear-cache/{user_id}")
+async def clear_user_cache(user_id: str):
+    """ユーザーのキャッシュをクリア（デバッグ用）"""
+    from firebase_admin import firestore
+    db = firestore.client()
+
+    # daily_recommendations サブコレクション
+    cache_ref = db.collection("users").document(user_id).collection("daily_recommendations")
+    docs = cache_ref.stream()
+
+    deleted_count = 0
+    for doc in docs:
+        doc.reference.delete()
+        deleted_count += 1
+
+    return {"message": f"Cleared {deleted_count} cache entries for user {user_id}"}
+
+
 # ==================== コーディネート提案 ====================
 
 @router.post("/outfit/recommend")

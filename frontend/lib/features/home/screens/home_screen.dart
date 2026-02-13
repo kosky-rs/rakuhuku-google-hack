@@ -566,6 +566,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           const SizedBox(height: 16),
 
+          // Mannequin Image
+          if (outfit.mannequinImageUrl != null && outfit.mannequinImageUrl!.isNotEmpty)
+            _buildMannequinImageSection(outfit.mannequinImageUrl!, isDark),
+
+          const SizedBox(height: 16),
+
           // Theme badge
           _buildThemeBadge(outfit.agentType, isDark),
 
@@ -645,6 +651,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMannequinImageSection(String imageUrl, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: 400,
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.backgroundDark.withOpacity(0.5)
+            : AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+          errorBuilder: (_, __, ___) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.checkroom_outlined,
+                  size: 80,
+                  color: AppColors.textMuted,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'コーディネート画像',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

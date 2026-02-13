@@ -236,16 +236,25 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
       ),
     );
 
+    // Trigger callback first (save to history)
+    widget.onSelectAsToday(currentIndex, outfit);
+
     // Auto-close dialog after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.of(context).pop();
         _confettiController.stop();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ 今日のコーデを履歴に保存しました'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     });
-
-    // Trigger callback
-    widget.onSelectAsToday(currentIndex, outfit);
   }
 
   void _handleSkip() {
