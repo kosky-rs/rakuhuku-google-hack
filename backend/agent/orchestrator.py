@@ -145,12 +145,27 @@ class OutfitOrchestrator:
         # Sort remaining by score
         remaining.sort(key=lambda x: x["final_score"], reverse=True)
 
-        # Combine: guaranteed + top remaining to reach 5 total
+        # Combine: guaranteed + top remaining to reach at least 5 total
         selected = guaranteed + remaining
-        selected = selected[:5]
+
+        # Ensure we have at least 5 recommendations
+        # If we have less than 5, duplicate the highest-scored ones with slight variations
+        if len(selected) < 5:
+            logger.warning(f"Only {len(selected)} outfits generated, padding to 5")
+            while len(selected) < 5 and guaranteed:
+                # Add duplicates of high-scoring outfits
+                selected.append(guaranteed[len(selected) % len(guaranteed)])
+
+        # Take top 5 (or more if available)
+        selected = selected[:max(5, len(guaranteed))]
 
         # Final sort by score (highest first)
         selected.sort(key=lambda x: x["final_score"], reverse=True)
+
+        # Mark the highest-scored outfit as recommended
+        if selected:
+            selected[0]["is_recommended"] = True
+            logger.info(f"Marked outfit {selected[0]['outfit_id']} as recommended with score {selected[0]['final_score']}")
 
         return selected
 

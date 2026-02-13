@@ -52,6 +52,7 @@ class OutfitRecommendation {
   final String reasoning;
   final String source; // closet or external
   final List<RakutenProduct>? externalProducts;
+  final bool isRecommended; // 最もおすすめのコーデかどうか
 
   const OutfitRecommendation({
     required this.id,
@@ -61,6 +62,7 @@ class OutfitRecommendation {
     required this.reasoning,
     required this.source,
     this.externalProducts,
+    this.isRecommended = false,
   });
 
   factory OutfitRecommendation.fromJson(Map<String, dynamic> json) {
@@ -78,6 +80,7 @@ class OutfitRecommendation {
               .map((e) => RakutenProduct.fromJson(e as Map<String, dynamic>))
               .toList()
           : null,
+      isRecommended: json['is_recommended'] as bool? ?? false,
     );
   }
 
@@ -91,6 +94,7 @@ class OutfitRecommendation {
       'source': source,
       if (externalProducts != null)
         'external_products': externalProducts!.map((e) => e.toJson()).toList(),
+      'is_recommended': isRecommended,
     };
   }
 }
