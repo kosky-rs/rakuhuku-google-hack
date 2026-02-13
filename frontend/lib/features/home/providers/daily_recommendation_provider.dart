@@ -86,12 +86,39 @@ class DailyRecommendationNotifier
       final dailyRec = await _apiClient.getDailyOutfits(
         userId: _userId,
       );
+
+      // Check if user already selected today's outfit
+      OutfitRecommendation? selectedOutfit;
+      try {
+        final history = await _apiClient.getOutfitHistory(userId: _userId, limit: 1);
+        if (history.isNotEmpty) {
+          final latestHistory = history.first;
+          final wornDate = latestHistory['worn_date'] as String?;
+          final today = DateTime.now().toIso8601String().split('T')[0];
+
+          if (wornDate == today) {
+            // Find matching outfit in recommendations
+            final items = latestHistory['items'] as List<dynamic>;
+            for (final rec in dailyRec.recommendations) {
+              if (_itemsMatch(rec.items, items)) {
+                selectedOutfit = rec;
+                print('Restored today\'s outfit from history: ${rec.id}');
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print('Failed to restore today\'s outfit: $e');
+      }
+
       state = state.copyWith(
         dailyRec: dailyRec,
         isLoading: false,
         currentCardIndex: 0,
         allRejected: false,
         isTierLimited: false,
+        selectedTodayOutfit: selectedOutfit,
       );
     } on ApiException catch (e) {
       state = state.copyWith(
@@ -106,6 +133,17 @@ class DailyRecommendationNotifier
         isTierLimited: false,
       );
     }
+  }
+
+  /// Check if two item lists match
+  bool _itemsMatch(List<ClothingItem> recItems, List<dynamic> historyItems) {
+    if (recItems.length != historyItems.length) return false;
+
+    final recNames = recItems.map((e) => e.name).toSet();
+    final historyNames = historyItems.map((e) => e['name'] as String).toSet();
+
+    return recNames.length == historyNames.length &&
+           recNames.intersection(historyNames).length == recNames.length;
   }
 
   /// Record swipe action (approve or reject)
