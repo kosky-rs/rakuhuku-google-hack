@@ -76,6 +76,7 @@ async def get_closet_items(
             continue
 
         # Ensure frontend-expected fields have defaults
+        item_data.setdefault("image_url", None)
         item_data.setdefault("brand", None)
         item_data.setdefault("usage_score", 0)
         item_data.setdefault("last_worn_at", None)

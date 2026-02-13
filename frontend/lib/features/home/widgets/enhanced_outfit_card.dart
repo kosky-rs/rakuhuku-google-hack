@@ -38,10 +38,13 @@ class EnhancedOutfitCard extends StatelessWidget {
           // Header with theme badge
           _buildHeader(isDark),
 
-          // Outfit collage
+          // Mannequin image (main visual)
           Expanded(
-            child: _buildOutfitCollage(isDark),
+            child: _buildMannequinImage(isDark),
           ),
+
+          // Items list (compact)
+          _buildItemsList(isDark),
 
           // AI Score section
           _buildAIScoreSection(isDark),
@@ -166,96 +169,141 @@ class EnhancedOutfitCard extends StatelessWidget {
     );
   }
 
-  Widget _buildOutfitCollage(bool isDark) {
-    if (recommendation.items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.checkroom_outlined,
-              size: 80,
-              color: AppColors.textMuted,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'アイテムがありません',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _buildMannequinImage(bool isDark) {
+    final imageUrl = recommendation.mannequinImageUrl;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.backgroundDark.withOpacity(0.5)
             : AppColors.backgroundLight,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        children: recommendation.items.take(4).map((item) {
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: item.imageUrl != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      item.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildItemPlaceholder(item),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
                     ),
-                  )
-                : _buildItemPlaceholder(item),
-          );
-        }).toList(),
+                  );
+                },
+                errorBuilder: (_, __, ___) => _buildMannequinPlaceholder(isDark),
+              )
+            : _buildMannequinPlaceholder(isDark),
       ),
     );
   }
 
-  Widget _buildItemPlaceholder(item) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          _getCategoryIcon(item.category),
-          size: 40,
-          color: AppColors.primary.withOpacity(0.3),
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            item.name,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+  Widget _buildMannequinPlaceholder(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.checkroom_outlined,
+            size: 80,
+            color: AppColors.textMuted,
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Text(
+            'コーディネート画像',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsList(bool isDark) {
+    if (recommendation.items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.backgroundDark.withOpacity(0.5)
+            : Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.list,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'アイテム一覧',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: recommendation.items.map((item) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[800] : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _getCategoryIcon(item.category),
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      item.name,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -359,6 +407,8 @@ class EnhancedOutfitCard extends StatelessWidget {
                     color: isDark ? Colors.white70 : AppColors.textPrimary,
                     height: 1.5,
                   ),
+                  maxLines: null,
+                  softWrap: true,
                 ),
               ],
             ),

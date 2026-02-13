@@ -493,7 +493,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Today's Outfit
+          // Header: Today's Outfit with Close Button
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -511,30 +511,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 40),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '今日のコーデ',
-                        style: AppTextStyles.h3.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // Close button row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () {
+                        ref.read(dailyRecommendationProvider.notifier).reset();
+                      },
+                      tooltip: '他のコーデを見る',
+                    ),
+                  ],
+                ),
+                // Main header content
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 40),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '今日のコーデ',
+                            style: AppTextStyles.h3.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '素敵な一日を！',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '素敵な一日を！',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),

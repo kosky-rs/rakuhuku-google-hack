@@ -258,15 +258,14 @@ async def get_or_generate_daily_recommendations(
     logger.info(f"Generating new recommendations for user {user_id}")
     recommendations = await generator_func(user_id, weather, tpo, user_preferences)
 
-    # キャッシュ保存
+    # キャッシュ保存（常に更新）
+    await cache_recommendations(
+        user_id, today, recommendations, weather, tpo, user_preferences
+    )
+
+    # 再生成の場合はgeneration_countをインクリメント
     if force_regenerate:
-        # 再生成の場合はgeneration_countをインクリメント
         await increment_generation_count(user_id, today)
-    else:
-        # 初回生成の場合は新規キャッシュ作成
-        await cache_recommendations(
-            user_id, today, recommendations, weather, tpo, user_preferences
-        )
 
     # Tier使用カウント増加
     await increment_tier_usage(user_id, today)

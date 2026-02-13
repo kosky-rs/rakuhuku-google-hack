@@ -299,6 +299,7 @@ class ApiClient {
     Map<String, dynamic>? tpo,
     double? score,
     String? feedback,
+    String? wornDate,
   }) async {
     try {
       await _dio.post('/outfit/history', data: {
@@ -308,6 +309,7 @@ class ApiClient {
         'tpo': tpo,
         'score': score,
         'feedback': feedback,
+        'worn_date': wornDate ?? DateTime.now().toIso8601String().split('T')[0],
       });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

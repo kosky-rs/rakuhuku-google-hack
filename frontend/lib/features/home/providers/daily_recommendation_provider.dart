@@ -185,6 +185,7 @@ class DailyRecommendationNotifier
       final items = outfitDetails['items'] as List<dynamic>;
       final weather = state.dailyRec?.weather;
       final tpo = state.dailyRec?.tpo;
+      final today = DateTime.now().toIso8601String().split('T')[0];
 
       await _apiClient.saveOutfitHistory(
         userId: _userId,
@@ -204,10 +205,12 @@ class DailyRecommendationNotifier
             : null,
         score: outfitDetails['score'] as double?,
         feedback: outfitDetails['reasoning'] as String?,
+        wornDate: today,
       );
-      print('Successfully saved outfit to history for user $_userId');
+      print('✅ Successfully saved outfit to history for user $_userId on $today');
     } catch (e) {
-      print('Failed to save outfit to history: $e');
+      print('❌ Failed to save outfit to history: $e');
+      rethrow; // Re-throw to let caller handle the error
     }
   }
 
@@ -257,29 +260,49 @@ class DailyRecommendationNotifier
     required int index,
     required OutfitRecommendation outfit,
   }) async {
+    print('🎯 selectAsToday called for outfit: ${outfit.id}');
+
     // Update state immediately - mark as selected
     state = state.copyWith(
       allRejected: false,
       selectedTodayOutfit: outfit,
     );
 
+    final outfitDetails = {
+      'items': outfit.items.map((e) => e.toJson()).toList(),
+      'score': outfit.score,
+      'reasoning': outfit.reasoning,
+      'source': outfit.source,
+      'agent_type': outfit.agentType,
+    };
+
     try {
-      // Record the swipe as approval (async - don't block UI)
-      await recordSwipe(
+      // Save to history first (most important)
+      print('📝 Saving to history...');
+      await _saveToHistory(outfitDetails);
+      print('✅ Successfully saved today\'s outfit to history');
+    } catch (e) {
+      print('❌ CRITICAL: Failed to save to history: $e');
+      // Update state to show error (optional: add error field to state)
+      return; // Don't proceed if history save fails
+    }
+
+    try {
+      // Record the swipe as approval (for preference learning)
+      print('📊 Recording swipe...');
+      await _apiClient.recordSwipe(
+        userId: _userId,
         outfitId: outfit.id,
         action: 'approve',
-        outfitDetails: {
-          'items': outfit.items.map((e) => e.toJson()).toList(),
-          'score': outfit.score,
-          'reasoning': outfit.reasoning,
-          'source': outfit.source,
-          'agent_type': outfit.agentType,
-        },
+        outfitDetails: outfitDetails,
       );
+      print('✅ Successfully recorded swipe');
     } catch (e) {
-      // Log error but don't revert state - user already saw celebration dialog
-      print('Failed to record swipe: $e');
+      print('⚠️ Failed to record swipe (non-critical): $e');
+      // This is less critical, so we don't return
     }
+
+    print('🎉 selectAsToday completed successfully');
   }
 
   /// Mark all as rejected (show regenerate prompt)

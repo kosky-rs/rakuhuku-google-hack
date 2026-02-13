@@ -9,8 +9,15 @@ from agent.style_agents import (
     BalancedStyleAgent,
     UniqueStyleAgent,
 )
-
 logger = logging.getLogger(__name__)
+
+# Import nano_banana with fallback
+try:
+    from agent.tools.nano_banana import generate_outfit_mannequin_image
+    NANO_BANANA_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Failed to import nano_banana: {e}. Using fallback placeholder generation.")
+    NANO_BANANA_AVAILABLE = False
 
 
 # ==================== オーケストレーター ====================
@@ -102,6 +109,39 @@ class OutfitOrchestrator:
 
         logger.info(f"Selected top 5 recommendations with scores: {[r['score'] for r in top_5]}")
 
+        # Generate mannequin images for each outfit
+        for outfit in top_5:
+            try:
+                agent_type = outfit.get("agent_type", "casual")
+                gender = user_preferences.get("gender", "male")
+
+                logger.info(f"Generating mannequin image for outfit {outfit['outfit_id']} (agent: {agent_type}, gender: {gender})")
+
+                if NANO_BANANA_AVAILABLE:
+                    items = outfit.get("items", [])
+                    # Generate image (or get placeholder)
+                    image_url = generate_outfit_mannequin_image(
+                        items=items,
+                        weather=weather,
+                        style=agent_type,
+                        gender=gender,
+                    )
+                else:
+                    # Fallback: generate placeholder directly
+                    image_url = self._get_placeholder_image_url(agent_type, gender)
+
+                if image_url:
+                    outfit["mannequin_image_url"] = image_url
+                    logger.info(f"Successfully set mannequin image URL for outfit {outfit['outfit_id']}: {image_url[:50]}...")
+                else:
+                    logger.warning(f"Image generation returned None for outfit {outfit['outfit_id']}")
+                    outfit["mannequin_image_url"] = self._get_placeholder_image_url(agent_type, gender)
+
+            except Exception as e:
+                logger.error(f"Failed to generate mannequin image for outfit {outfit['outfit_id']}: {e}", exc_info=True)
+                # Add placeholder on failure
+                outfit["mannequin_image_url"] = self._get_placeholder_image_url(agent_type, gender)
+
         return top_5
 
     def _select_top_recommendations(
@@ -168,6 +208,29 @@ class OutfitOrchestrator:
             logger.info(f"Marked outfit {selected[0]['outfit_id']} as recommended with score {selected[0]['final_score']}")
 
         return selected
+
+    def _get_placeholder_image_url(self, style: str, gender: str) -> str:
+        """
+        Get placeholder image URL based on style and gender.
+        Fallback method when nano_banana is not available.
+        """
+        style_colors = {
+            "casual": "3498db",  # Blue
+            "formal": "2c3e50",  # Dark gray
+            "balanced": "27ae60",  # Green
+            "unique": "e74c3c",  # Red
+        }
+
+        color = style_colors.get(style, "95a5a6")
+        gender_text = "MEN" if gender == "male" else "WOMEN"
+
+        # Placeholder image URL (800x1200 for mannequin aspect ratio)
+        # URL-encode the text to avoid issues
+        import urllib.parse
+        text = urllib.parse.quote(f"{gender_text} {style.upper()}")
+        placeholder_url = f"https://via.placeholder.com/800x1200/{color}/ffffff?text={text}"
+
+        return placeholder_url
 
     def _ensure_agent_diversity(self, outfits: List[Dict]) -> List[Dict]:
         """

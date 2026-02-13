@@ -53,6 +53,7 @@ class OutfitRecommendation {
   final String source; // closet or external
   final List<RakutenProduct>? externalProducts;
   final bool isRecommended; // 最もおすすめのコーデかどうか
+  final String? mannequinImageUrl; // 全身マネキン画像URL
 
   const OutfitRecommendation({
     required this.id,
@@ -63,6 +64,7 @@ class OutfitRecommendation {
     required this.source,
     this.externalProducts,
     this.isRecommended = false,
+    this.mannequinImageUrl,
   });
 
   factory OutfitRecommendation.fromJson(Map<String, dynamic> json) {
@@ -81,6 +83,7 @@ class OutfitRecommendation {
               .toList()
           : null,
       isRecommended: json['is_recommended'] as bool? ?? false,
+      mannequinImageUrl: json['mannequin_image_url'] as String?,
     );
   }
 
@@ -95,6 +98,7 @@ class OutfitRecommendation {
       if (externalProducts != null)
         'external_products': externalProducts!.map((e) => e.toJson()).toList(),
       'is_recommended': isRecommended,
+      if (mannequinImageUrl != null) 'mannequin_image_url': mannequinImageUrl,
     };
   }
 }

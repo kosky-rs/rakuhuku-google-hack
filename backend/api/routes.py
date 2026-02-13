@@ -21,6 +21,7 @@ from agent.integration_helper import (
 )
 from agent.tools.recommendation_cache import TierLimitExceeded
 from agent.tools.preference_learner import record_swipe
+from agent.tools.firebase_helper import upload_base64_image
 
 logger = logging.getLogger(__name__)
 
@@ -414,13 +415,21 @@ async def add_closet_items_bulk_endpoint(request: BulkClosetItemsRequest):
 
     items_data = []
     for item in request.items:
+        # base64画像をFirebase Storageにアップロード
+        image_url = None
+        if item.image_base64:
+            image_url = upload_base64_image(
+                base64_data=item.image_base64,
+                user_id=request.user_id,
+            )
+
         items_data.append({
             "name": item.name,
             "category": item.category,
             "color": item.color,
             "source": item.source,
             "source_diagnosis_id": item.source_diagnosis_id,
-            "image_url": None,  # TODO: Firebase Storageにアップロード後のURLを設定
+            "image_url": image_url,
             "season": _estimate_season(item.category),
             "formality": _estimate_formality(item.name),
             "tags": [],
