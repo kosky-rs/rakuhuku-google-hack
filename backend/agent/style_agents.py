@@ -318,6 +318,7 @@ class CasualStyleAgent(BaseStyleAgent):
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
+        gender = user_preferences.get("gender", "male")
 
         # Get casual items from closet
         items = await get_closet_items(
@@ -325,15 +326,12 @@ class CasualStyleAgent(BaseStyleAgent):
             formality="casual",
         )
 
-        if not items:
-            logger.warning(f"No casual items found for user {user_id}")
-            return self._empty_outfit()
+        selected_items = []
+        source = "closet"
 
-        # Select items by category
-        selected_items = self._select_items_by_category(items)
-
-        if not selected_items:
-            return self._empty_outfit()
+        if items:
+            # Select items by category from closet
+            selected_items = self._select_items_by_category(items)
 
         # Create initial outfit
         outfit = {
@@ -342,7 +340,7 @@ class CasualStyleAgent(BaseStyleAgent):
             "items": selected_items,
             "score": 0,
             "reasoning": "",
-            "source": "closet",
+            "source": source,
         }
 
         # Detect missing categories and supplement with Rakuten
@@ -351,7 +349,7 @@ class CasualStyleAgent(BaseStyleAgent):
         missing_categories = [cat for cat in required_categories if cat not in present_categories]
 
         if missing_categories:
-            gender = user_preferences.get("gender", "male")
+            logger.info(f"Closet empty or missing categories {missing_categories}, using Rakuten products")
             outfit = await supplement_outfit_with_rakuten(
                 outfit,
                 missing_categories,
@@ -360,6 +358,11 @@ class CasualStyleAgent(BaseStyleAgent):
             )
             # Update items list with supplemented products
             selected_items = outfit["items"]
+
+        # If still no items after supplementation, return empty outfit
+        if not selected_items:
+            logger.warning(f"Failed to generate outfit for user {user_id}")
+            return self._empty_outfit()
 
         # Score the outfit
         score = self._score_outfit(selected_items, weather, tpo, user_preferences)
@@ -415,6 +418,7 @@ class FormalStyleAgent(BaseStyleAgent):
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
+        gender = user_preferences.get("gender", "male")
 
         # Get formal/business casual items
         items = await get_closet_items(
@@ -429,14 +433,12 @@ class FormalStyleAgent(BaseStyleAgent):
                 formality="business_casual",
             )
 
-        if not items:
-            logger.warning(f"No formal items found for user {user_id}")
-            return self._empty_outfit()
+        selected_items = []
+        source = "closet"
 
-        selected_items = self._select_items_by_category(items)
-
-        if not selected_items:
-            return self._empty_outfit()
+        if items:
+            # Select items by category from closet
+            selected_items = self._select_items_by_category(items)
 
         # Create initial outfit
         outfit = {
@@ -454,14 +456,20 @@ class FormalStyleAgent(BaseStyleAgent):
         missing_categories = [cat for cat in required_categories if cat not in present_categories]
 
         if missing_categories:
-            gender = user_preferences.get("gender", "male")
+            logger.info(f"Closet empty or missing categories {missing_categories}, using Rakuten products")
             outfit = await supplement_outfit_with_rakuten(
                 outfit,
                 missing_categories,
                 weather,
                 gender,
             )
+            # Update items list with supplemented products
             selected_items = outfit["items"]
+
+        # If still no items after supplementation, return empty outfit
+        if not selected_items:
+            logger.warning(f"Failed to generate formal outfit for user {user_id}")
+            return self._empty_outfit()
 
         # Score the outfit
         score = self._score_outfit(selected_items, weather, tpo, user_preferences)
@@ -515,6 +523,7 @@ class BalancedStyleAgent(BaseStyleAgent):
         weather = context.get("weather", {})
         tpo = context.get("tpo", {})
         user_preferences = context.get("user_preferences", {})
+        gender = user_preferences.get("gender", "male")
 
         # Get business casual items
         items = await get_closet_items(
@@ -528,14 +537,12 @@ class BalancedStyleAgent(BaseStyleAgent):
             formal_items = await get_closet_items(user_id=user_id, formality="formal")
             items = casual_items + formal_items
 
-        if not items:
-            logger.warning(f"No items found for user {user_id}")
-            return self._empty_outfit()
+        selected_items = []
+        source = "closet"
 
-        selected_items = self._select_items_by_category(items)
-
-        if not selected_items:
-            return self._empty_outfit()
+        if items:
+            # Select items by category from closet
+            selected_items = self._select_items_by_category(items)
 
         # Create initial outfit
         outfit = {
@@ -553,14 +560,20 @@ class BalancedStyleAgent(BaseStyleAgent):
         missing_categories = [cat for cat in required_categories if cat not in present_categories]
 
         if missing_categories:
-            gender = user_preferences.get("gender", "male")
+            logger.info(f"Closet empty or missing categories {missing_categories}, using Rakuten products")
             outfit = await supplement_outfit_with_rakuten(
                 outfit,
                 missing_categories,
                 weather,
                 gender,
             )
+            # Update items list with supplemented products
             selected_items = outfit["items"]
+
+        # If still no items after supplementation, return empty outfit
+        if not selected_items:
+            logger.warning(f"Failed to generate balanced outfit for user {user_id}")
+            return self._empty_outfit()
 
         # Score the outfit
         score = self._score_outfit(selected_items, weather, tpo, user_preferences)
@@ -642,13 +655,20 @@ class UniqueStyleAgent(BaseStyleAgent):
             logger.warning("No external products found")
             return self._empty_outfit()
 
+        # Convert external products to item-like format for reasoning
+        items_for_reasoning = []
+        for product in external_products:
+            items_for_reasoning.append({
+                "name": product.get("name", ""),
+                "category": product.get("category", ""),
+                "color": product.get("color", ""),
+            })
+
         # Score based on trend relevance and price
         score = self._score_external_outfit(external_products, weather, tpo, user_preferences)
 
-        reasoning = (
-            f"Uniqueスタイルの外部商品提案（スコア: {score:.1f}）。"
-            f"楽天から厳選したトレンドアイテムをご紹介。"
-        )
+        # Generate detailed reasoning using base method
+        reasoning = self._generate_reasoning(items_for_reasoning, weather, tpo, score)
 
         return {
             "outfit_id": str(uuid.uuid4()),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
+import '../../../core/models/daily_recommendation.dart';
+import '../../../core/models/clothing_item.dart';
 import '../providers/daily_recommendation_provider.dart';
 import '../widgets/horizontal_outfit_browser.dart';
 
@@ -111,6 +113,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildContent(BuildContext context, DailyRecommendationState state, bool isDark) {
+    // Show selected today's outfit at top if available
+    if (state.selectedTodayOutfit != null) {
+      return _buildSelectedTodayOutfit(state.selectedTodayOutfit!, state, isDark);
+    }
+
     // Loading state
     if (state.isLoading) {
       return Center(
@@ -474,6 +481,332 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _handleAllRejected() {
     ref.read(dailyRecommendationProvider.notifier).markAllRejected();
+  }
+
+  Widget _buildSelectedTodayOutfit(
+    OutfitRecommendation outfit,
+    DailyRecommendationState state,
+    bool isDark,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Today's Outfit
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 40),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '今日のコーデ',
+                        style: AppTextStyles.h3.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '素敵な一日を！',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Weather & TPO context
+          if (state.dailyRec != null)
+            _buildContextHeader(state.dailyRec!, isDark),
+
+          const SizedBox(height: 16),
+
+          // Theme badge
+          _buildThemeBadge(outfit.agentType, isDark),
+
+          const SizedBox(height: 16),
+
+          // AI Score
+          _buildAIScoreDisplay(outfit.score, isDark),
+
+          const SizedBox(height: 20),
+
+          // Reasoning
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.lightbulb, color: Colors.blue, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AIの選定理由',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        outfit.reasoning,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          height: 1.5,
+                          color: isDark ? Colors.white70 : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Items
+          Text(
+            'アイテム',
+            style: AppTextStyles.h3.copyWith(
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          ...outfit.items.map((item) => _buildItemCard(item, isDark)).toList(),
+
+          const SizedBox(height: 20),
+
+          // Action: View other recommendations
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ref.read(dailyRecommendationProvider.notifier).reset();
+              },
+              icon: const Icon(Icons.swap_horiz),
+              label: const Text('他のコーデを見る'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeBadge(String agentType, bool isDark) {
+    final themeMap = {
+      'casual': ('カジュアルスタイル', Icons.weekend, Colors.blue),
+      'formal': ('フォーマルスタイル', Icons.business, Colors.purple),
+      'balanced': ('バランス型', Icons.balance, Colors.green),
+      'unique': ('トレンド重視', Icons.star, Colors.orange),
+    };
+
+    final theme = themeMap[agentType] ?? ('スタイル', Icons.style, Colors.grey);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.$3.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.$3.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(theme.$2, color: theme.$3, size: 24),
+          const SizedBox(width: 12),
+          Text(
+            theme.$1,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: theme.$3,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIScoreDisplay(double score, bool isDark) {
+    final scoreColor = score >= 80
+        ? Colors.green
+        : score >= 60
+            ? Colors.orange
+            : Colors.red;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'AIおすすめ度',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: isDark ? Colors.white70 : AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: LinearProgressIndicator(
+                value: score / 100,
+                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
+                color: scoreColor,
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${score.toInt()}点',
+              style: AppTextStyles.h3.copyWith(
+                color: scoreColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: List.generate(5, (index) {
+            final filled = index < (score / 20).round();
+            return Icon(
+              filled ? Icons.star : Icons.star_border,
+              size: 20,
+              color: Colors.amber,
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildItemCard(ClothingItem item, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Category icon
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getCategoryIcon(item.category),
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Item details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_getCategoryName(item.category)} • ${item.color}',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'tops':
+        return Icons.checkroom;
+      case 'bottoms':
+        return Icons.safety_divider;
+      case 'shoes':
+        return Icons.snooze;
+      case 'outerwear':
+        return Icons.dry_cleaning;
+      case 'accessories':
+        return Icons.watch;
+      default:
+        return Icons.shopping_bag;
+    }
+  }
+
+  String _getCategoryName(String category) {
+    switch (category) {
+      case 'tops':
+        return 'トップス';
+      case 'bottoms':
+        return 'ボトムス';
+      case 'shoes':
+        return 'シューズ';
+      case 'outerwear':
+        return 'アウター';
+      case 'accessories':
+        return 'アクセサリー';
+      default:
+        return category;
+    }
   }
 
   void _showCalendarDialog(BuildContext context, DailyRecommendationState state) {

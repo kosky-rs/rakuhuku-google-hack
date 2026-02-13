@@ -1,0 +1,13 @@
+{
+  "projects": {},
+  "targets": {
+    "rakufuku-pwa": {
+      "hosting": {
+        "rakufuku-pwa": [
+          "rakufuku-pwa"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

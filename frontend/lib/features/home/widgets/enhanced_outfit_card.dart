@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/daily_recommendation.dart';
+import '../../../core/models/clothing_item.dart';
 import '../../../config/theme.dart';
 
 /// Enhanced outfit card with theme badge, AI score, and detailed reasoning
 class EnhancedOutfitCard extends StatelessWidget {
   final OutfitRecommendation recommendation;
+  final VoidCallback? onTap;
 
   const EnhancedOutfitCard({
     super.key,
     required this.recommendation,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showOutfitDetailDialog(context),
+      child: Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -49,6 +54,7 @@ class EnhancedOutfitCard extends StatelessWidget {
             _buildSourceIndicator(isDark),
         ],
       ),
+    ),
     );
   }
 
@@ -392,5 +398,276 @@ class EnhancedOutfitCard extends StatelessWidget {
       default:
         return Icons.category;
     }
+  }
+
+  String _getCategoryName(String category) {
+    switch (category.toLowerCase()) {
+      case 'tops':
+        return 'トップス';
+      case 'bottoms':
+        return 'ボトムス';
+      case 'outerwear':
+        return 'アウター';
+      case 'shoes':
+        return 'シューズ';
+      case 'accessories':
+        return 'アクセサリー';
+      default:
+        return category;
+    }
+  }
+
+  void _showOutfitDetailDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'コーデ詳細',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Theme badge
+                      _buildThemeBadge(recommendation.agentType),
+
+                      const SizedBox(height: 20),
+
+                      // AI Score
+                      Text(
+                        'AIおすすめ度',
+                        style: AppTextStyles.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAIScoreSection(isDark),
+
+                      const SizedBox(height: 24),
+
+                      // Reasoning
+                      Text(
+                        'AIの選定理由',
+                        style: AppTextStyles.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.backgroundDark : Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.lightbulb, color: Colors.blue, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                recommendation.reasoning,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  height: 1.6,
+                                  color: isDark ? Colors.white70 : AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Items
+                      Text(
+                        'アイテム',
+                        style: AppTextStyles.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      ...recommendation.items.map((item) => Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.backgroundDark : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getCategoryIcon(item.category),
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: AppTextStyles.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_getCategoryName(item.category)} • ${item.color}',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: isDark ? Colors.white70 : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )).toList(),
+
+                      // External products
+                      if (recommendation.externalProducts != null &&
+                          recommendation.externalProducts!.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        Text(
+                          '楽天おすすめ商品',
+                          style: AppTextStyles.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        ...recommendation.externalProducts!.map((product) => Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.backgroundDark : Colors.orange[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.shopping_bag, color: Colors.orange, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      product.name,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : AppColors.textPrimary,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Text(
+                                    '¥${product.price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                                    style: AppTextStyles.h3.copyWith(
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                  if (product.reviewAverage != null) ...[
+                                    const SizedBox(width: 16),
+                                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      product.reviewAverage!.toStringAsFixed(1),
+                                      style: AppTextStyles.bodySmall,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                product.shopName,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: isDark ? Colors.white70 : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

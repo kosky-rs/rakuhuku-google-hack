@@ -30,6 +30,7 @@ class DailyRecommendationState {
   final int currentCardIndex;
   final bool allRejected;
   final bool isTierLimited;
+  final OutfitRecommendation? selectedTodayOutfit;
 
   const DailyRecommendationState({
     this.dailyRec,
@@ -38,6 +39,7 @@ class DailyRecommendationState {
     this.currentCardIndex = 0,
     this.allRejected = false,
     this.isTierLimited = false,
+    this.selectedTodayOutfit,
   });
 
   int get generationsRemaining => dailyRec?.generationsRemaining ?? 0;
@@ -52,6 +54,7 @@ class DailyRecommendationState {
     int? currentCardIndex,
     bool? allRejected,
     bool? isTierLimited,
+    OutfitRecommendation? selectedTodayOutfit,
   }) {
     return DailyRecommendationState(
       dailyRec: dailyRec ?? this.dailyRec,
@@ -60,6 +63,7 @@ class DailyRecommendationState {
       currentCardIndex: currentCardIndex ?? this.currentCardIndex,
       allRejected: allRejected ?? this.allRejected,
       isTierLimited: isTierLimited ?? this.isTierLimited,
+      selectedTodayOutfit: selectedTodayOutfit ?? this.selectedTodayOutfit,
     );
   }
 }
@@ -220,9 +224,10 @@ class DailyRecommendationNotifier
         },
       );
 
-      // Update state - mark as selected
+      // Update state - mark as selected and save outfit
       state = state.copyWith(
         allRejected: false,
+        selectedTodayOutfit: outfit,
       );
     } catch (e) {
       // Silent fail - user already saw celebration dialog
