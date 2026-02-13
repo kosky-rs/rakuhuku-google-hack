@@ -166,8 +166,9 @@ class DailyRecommendationNotifier
         score: outfitDetails['score'] as double?,
         feedback: outfitDetails['reasoning'] as String?,
       );
+      print('Successfully saved outfit to history for user $_userId');
     } catch (e) {
-      // Silent fail
+      print('Failed to save outfit to history: $e');
     }
   }
 
