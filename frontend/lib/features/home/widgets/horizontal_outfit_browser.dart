@@ -12,12 +12,16 @@ import 'enhanced_outfit_card.dart';
 /// - Vertical swipe down: Skip to next outfit
 class HorizontalOutfitBrowser extends StatefulWidget {
   final List<OutfitRecommendation> recommendations;
+  final Weather? weather;
+  final TPO? tpo;
   final Function(int index, OutfitRecommendation) onSelectAsToday;
   final Function(int index) onSkip;
 
   const HorizontalOutfitBrowser({
     super.key,
     required this.recommendations,
+    this.weather,
+    this.tpo,
     required this.onSelectAsToday,
     required this.onSkip,
   });
@@ -87,9 +91,11 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
                 transform: Matrix4.identity()
                   ..translate(0.0, _verticalDragDistance.clamp(-50.0, 50.0)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: EnhancedOutfitCard(
                     recommendation: widget.recommendations[index],
+                    weather: widget.weather,
+                    tpo: widget.tpo,
                   ),
                 ),
               );
@@ -154,9 +160,9 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
             ),
           ),
 
-        // Page indicator
+        // Page indicator (on card, over gradient)
         Positioned(
-          bottom: 16,
+          bottom: 24,
           left: 0,
           right: 0,
           child: Row(
@@ -164,14 +170,20 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
             children: List.generate(
               widget.recommendations.length,
               (index) => Container(
-                width: 8,
+                width: _currentPage == index ? 24 : 8,
                 height: 8,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(4),
                   color: _currentPage == index
-                      ? AppColors.primary
-                      : AppColors.textMuted.withOpacity(0.3),
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -192,7 +204,7 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
@@ -231,30 +243,38 @@ class _HorizontalOutfitBrowserState extends State<HorizontalOutfitBrowser> {
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  _confettiController.stop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'ホームに戻る',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
 
-    // Trigger callback first (save to history)
+    // Trigger callback (save to history)
     widget.onSelectAsToday(currentIndex, outfit);
-
-    // Auto-close dialog after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pop();
-        _confettiController.stop();
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ 今日のコーデを履歴に保存しました'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    });
   }
 
   void _handleSkip() {

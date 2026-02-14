@@ -44,15 +44,19 @@ def generate_outfit_mannequin_image(
     weather: Dict,
     style: str = "casual",
     gender: str = "male",
+    reasoning: str = "",
+    image_prompt_en: str = "",
 ) -> str:
     """
-    Generate a full-body mannequin outfit image using Vertex AI Imagen 3.
+    Generate a full-body mannequin outfit image using Vertex AI Imagen 4 Fast.
 
     Args:
         items: List of clothing items with name, category, color
         weather: Weather context
         style: Style type (casual, formal, balanced, unique)
         gender: Gender (male, female)
+        reasoning: Natural language outfit description from the style agent
+        image_prompt_en: English outfit description from Gemini for accurate image generation
 
     Returns:
         str: Image URL (or placeholder if generation disabled)
@@ -66,8 +70,8 @@ def generate_outfit_mannequin_image(
         # Initialize Vertex AI
         _initialize_vertex_ai()
 
-        # Build prompt from items
-        prompt = _build_mannequin_prompt(items, weather, style, gender)
+        # Build prompt from outfit description and items
+        prompt = _build_mannequin_prompt(items, weather, style, gender, reasoning, image_prompt_en)
         logger.info(f"🎨 Generating image with Imagen 4 Fast: {prompt[:100]}...")
 
         # Load Imagen 4 Fast model (latest, faster generation with better quota)
@@ -126,59 +130,69 @@ def _build_mannequin_prompt(
     weather: Dict,
     style: str,
     gender: str,
+    reasoning: str = "",
+    image_prompt_en: str = "",
 ) -> str:
-    """Build English prompt for Imagen 3 mannequin image generation"""
+    """Build English prompt for Imagen 4 Fast mannequin image generation.
 
-    # Gender-specific terms
+    Uses the Gemini-generated English outfit description (image_prompt_en)
+    for accurate item representation. Falls back to item-based construction
+    if image_prompt_en is not available.
+    """
+
     gender_term = "male" if gender == "male" else "female"
 
-    # Style descriptions
     style_descriptions = {
         "casual": "casual and relaxed",
-        "formal": "formal and sophisticated",
-        "balanced": "balanced and versatile",
-        "unique": "trendy and unique",
+        "formal": "formal and elegant",
+        "balanced": "smart casual and versatile",
+        "unique": "trendy and fashion-forward",
     }
-    style_desc = style_descriptions.get(style, "basic")
+    style_desc = style_descriptions.get(style, "stylish")
 
-    # Build item list
-    item_descriptions = []
-    for item in items:
-        name = item.get("name", "")
-        color = item.get("color", "")
-        category = item.get("category", "")
-
-        if name:
-            item_descriptions.append(f"- {name}")
-        elif color and category:
-            item_descriptions.append(f"- {color} {category}")
-
-    items_text = "\n".join(item_descriptions) if item_descriptions else "basic outfit"
-
-    # Temperature context
+    # Temperature context for seasonal appropriateness
     temp = weather.get("temperature", 20)
-    temp_context = ""
     if temp < 10:
-        temp_context = f" (cold weather: {temp}°C)"
-    elif temp > 25:
-        temp_context = f" (hot weather: {temp}°C)"
+        season_hint = "winter"
+    elif temp < 18:
+        season_hint = "autumn"
+    elif temp < 26:
+        season_hint = "spring"
+    else:
+        season_hint = "summer"
 
-    # Build full prompt for Imagen 3 (English)
-    prompt = f"""
-A full-body fashion mannequin wearing a {style_desc} {gender_term} outfit{temp_context}.
+    # Use Gemini's English description if available (preferred - avoids Japanese in prompt)
+    if image_prompt_en:
+        outfit_sentence = image_prompt_en
+    else:
+        # Fallback: build from items (may contain Japanese text)
+        outfit_parts = []
+        for item in items:
+            name = item.get("name", "")
+            color = item.get("color", "")
+            category = item.get("category", "")
 
-Outfit items:
-{items_text}
+            if color and name:
+                outfit_parts.append(f"{color} {name}")
+            elif name:
+                outfit_parts.append(name)
+            elif color and category:
+                outfit_parts.append(f"{color} {category}")
 
-Style requirements:
-- Clean white background
-- Full-body mannequin without face
-- Simple and professional product photography style
-- Clear visibility of all clothing items and colors
-- Fashion e-commerce catalog style
-- Minimal margins
-- Photorealistic rendering
-""".strip()
+        if outfit_parts:
+            outfit_sentence = ", ".join(outfit_parts[:-1])
+            if len(outfit_parts) > 1:
+                outfit_sentence += f", and {outfit_parts[-1]}"
+            else:
+                outfit_sentence = outfit_parts[0]
+        else:
+            outfit_sentence = f"a {style_desc} outfit"
+
+    prompt = f"""A single {gender_term} fashion mannequin wearing a complete {style_desc} {season_hint} outfit: {outfit_sentence}. The mannequin is dressed head-to-toe in this coordinated look, standing in a natural upright pose.
+
+Clean white studio background. Full-body view from head to shoes. Professional fashion e-commerce product photography. Photorealistic rendering. Studio lighting.
+
+CRITICAL: Show exactly ONE mannequin only. All clothing items must be worn ON the mannequin body. Do NOT place any separate clothing items, flat-lay items, or accessory displays beside or around the mannequin. No split-screen. No collage. No item grid. Just one single dressed mannequin."""
 
     return prompt
 

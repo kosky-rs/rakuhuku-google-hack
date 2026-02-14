@@ -11,6 +11,7 @@ from agent.tools.recommendation_cache import (
 from agent.tools.preference_learner import get_preference_profile
 from agent.tools.weather import weather_tool
 from agent.tools.calendar import calendar_tool
+from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,21 @@ async def generate_daily_outfits_with_cache(
             "total_swipes": 0,
             "approve_rate": 0.0,
         }
+
+    # 3.5. Fetch gender from user profile document
+    try:
+        db = firestore.client()
+        user_doc = db.collection("users").document(user_id).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            gender = user_data.get("gender", "male")
+            user_preferences["gender"] = gender
+            logger.info(f"User gender from profile: {gender}")
+        else:
+            user_preferences["gender"] = "male"
+    except Exception as e:
+        logger.error(f"User profile gender fetch failed: {e}")
+        user_preferences["gender"] = "male"
 
     # 4. Generator function for orchestrator
     async def outfit_generator(uid, w, t, prefs):

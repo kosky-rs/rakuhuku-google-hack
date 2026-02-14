@@ -58,7 +58,7 @@ class ClothingItem {
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
       description: json['description'] as String?,
-      source: json['source'] as String?,
+      source: json['item_source'] as String? ?? json['source'] as String?,
       marketplaceLinks: json['marketplace_links'] != null
           ? (json['marketplace_links'] as List<dynamic>)
               .map((e) => MarketplaceLink.fromJson(e as Map<String, dynamic>))
@@ -156,11 +156,11 @@ class MarketplaceLink {
 
 /// Clothing category enum
 enum ClothingCategory {
-  tops('tops', 'Tops'),
-  bottoms('bottoms', 'Bottoms'),
-  outerwear('outerwear', 'Outer'),
-  shoes('shoes', 'Shoes'),
-  accessories('accessories', 'Accessories');
+  tops('tops', 'トップス'),
+  bottoms('bottoms', 'ボトムス'),
+  outerwear('outerwear', 'アウター'),
+  shoes('shoes', 'シューズ'),
+  accessories('accessories', 'アクセサリー');
 
   final String value;
   final String label;
@@ -177,10 +177,10 @@ enum ClothingCategory {
 
 /// Formality level enum
 enum FormalityLevel {
-  casual('casual', 'Casual'),
-  smartCasual('smart_casual', 'Smart Casual'),
-  businessCasual('business_casual', 'Business Casual'),
-  formal('formal', 'Formal');
+  casual('casual', 'カジュアル'),
+  smartCasual('smart_casual', 'スマートカジュアル'),
+  businessCasual('business_casual', 'ビジネスカジュアル'),
+  formal('formal', 'フォーマル');
 
   final String value;
   final String label;
@@ -197,11 +197,11 @@ enum FormalityLevel {
 
 /// Season enum
 enum Season {
-  spring('spring', 'Spring'),
-  summer('summer', 'Summer'),
-  autumn('autumn', 'Autumn'),
-  winter('winter', 'Winter'),
-  allSeason('all_season', 'All Season');
+  spring('spring', '春'),
+  summer('summer', '夏'),
+  autumn('autumn', '秋'),
+  winter('winter', '冬'),
+  allSeason('all_season', 'オールシーズン');
 
   final String value;
   final String label;

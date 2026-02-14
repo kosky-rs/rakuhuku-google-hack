@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../home/providers/outfit_provider.dart' show apiClientProvider, currentUserIdProvider;
 
+/// Categories that allow only 1 item selection (radio-button behavior)
+const _singleSelectCategories = {'tops', 'bottoms', 'outerwear', 'shoes'};
+
 /// Diagnosis state
 class DiagnosisState {
   final bool isLoading;
@@ -14,6 +17,7 @@ class DiagnosisState {
   final String? imageBase64;
   final Map<String, dynamic>? result;
   final List<Map<String, dynamic>> selectedItems;
+  final List<Map<String, dynamic>> deduplicatedItems;
 
   const DiagnosisState({
     this.isLoading = false,
@@ -23,6 +27,7 @@ class DiagnosisState {
     this.imageBase64,
     this.result,
     this.selectedItems = const [],
+    this.deduplicatedItems = const [],
   });
 
   DiagnosisState copyWith({
@@ -33,6 +38,7 @@ class DiagnosisState {
     String? imageBase64,
     Map<String, dynamic>? result,
     List<Map<String, dynamic>>? selectedItems,
+    List<Map<String, dynamic>>? deduplicatedItems,
   }) {
     return DiagnosisState(
       isLoading: isLoading ?? this.isLoading,
@@ -42,6 +48,7 @@ class DiagnosisState {
       imageBase64: imageBase64 ?? this.imageBase64,
       result: result ?? this.result,
       selectedItems: selectedItems ?? this.selectedItems,
+      deduplicatedItems: deduplicatedItems ?? this.deduplicatedItems,
     );
   }
 
@@ -65,6 +72,53 @@ class DiagnosisNotifier extends StateNotifier<DiagnosisState> {
   final String _userId;
 
   DiagnosisNotifier(this._apiClient, this._userId) : super(const DiagnosisState());
+
+  /// Deduplicate detected items:
+  /// - tops/bottoms/outerwear/shoes: keep highest-confidence item per category
+  /// - accessories: deduplicate by name, keep highest-confidence per unique name
+  /// Assigns _itemId for unique identification
+  static List<Map<String, dynamic>> _deduplicateItems(List<dynamic> rawItems) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (final raw in rawItems) {
+      final item = Map<String, dynamic>.from(raw as Map);
+      final category = (item['category'] as String? ?? 'tops').toLowerCase();
+      grouped.putIfAbsent(category, () => []).add(item);
+    }
+
+    final List<Map<String, dynamic>> result = [];
+
+    for (final entry in grouped.entries) {
+      final category = entry.key;
+      final items = entry.value;
+
+      // Sort by confidence descending
+      items.sort((a, b) =>
+          ((b['confidence'] as num?)?.toDouble() ?? 0.0)
+              .compareTo((a['confidence'] as num?)?.toDouble() ?? 0.0));
+
+      if (_singleSelectCategories.contains(category)) {
+        // Keep only the highest-confidence item
+        result.add(items.first);
+      } else {
+        // Accessories: deduplicate by name
+        final Map<String, Map<String, dynamic>> byName = {};
+        for (final item in items) {
+          final name = item['name'] as String? ?? '';
+          if (!byName.containsKey(name)) {
+            byName[name] = item;
+          }
+        }
+        result.addAll(byName.values);
+      }
+    }
+
+    // Assign unique _itemId
+    for (int i = 0; i < result.length; i++) {
+      result[i]['_itemId'] = i;
+    }
+
+    return result;
+  }
 
   /// Set captured image from bytes (works on both web and native)
   void setImageFromBytes(String imagePath, Uint8List bytes) {
@@ -92,15 +146,15 @@ class DiagnosisNotifier extends StateNotifier<DiagnosisState> {
         context: context,
       );
 
-      // Pre-select all detected items
+      // Deduplicate and pre-select all items
       final detectedItems = result['detected_items'] as List<dynamic>? ?? [];
-      final selected = detectedItems
-          .map((item) => Map<String, dynamic>.from(item as Map))
-          .toList();
+      final deduplicated = _deduplicateItems(detectedItems);
+      final selected = List<Map<String, dynamic>>.from(deduplicated);
 
       state = state.copyWith(
         isAnalyzing: false,
         result: result,
+        deduplicatedItems: deduplicated,
         selectedItems: selected,
       );
     } catch (e) {
@@ -112,14 +166,23 @@ class DiagnosisNotifier extends StateNotifier<DiagnosisState> {
   }
 
   /// Toggle item selection for closet registration
+  /// Single-select categories (tops/bottoms/outerwear/shoes): radio behavior
+  /// Accessories: checkbox behavior (multiple allowed)
   void toggleItemSelection(Map<String, dynamic> item) {
     final current = List<Map<String, dynamic>>.from(state.selectedItems);
-    final index = current.indexWhere((i) =>
-        i['name'] == item['name'] && i['category'] == item['category']);
+    final itemId = item['_itemId'];
+    final category = (item['category'] as String? ?? '').toLowerCase();
+    final index = current.indexWhere((i) => i['_itemId'] == itemId);
 
     if (index >= 0) {
+      // Deselect
       current.removeAt(index);
     } else {
+      // For single-select categories, remove existing item of same category
+      if (_singleSelectCategories.contains(category)) {
+        current.removeWhere((i) =>
+            (i['category'] as String? ?? '').toLowerCase() == category);
+      }
       current.add(item);
     }
 
@@ -128,8 +191,8 @@ class DiagnosisNotifier extends StateNotifier<DiagnosisState> {
 
   /// Check if item is selected
   bool isItemSelected(Map<String, dynamic> item) {
-    return state.selectedItems.any((i) =>
-        i['name'] == item['name'] && i['category'] == item['category']);
+    final itemId = item['_itemId'];
+    return state.selectedItems.any((i) => i['_itemId'] == itemId);
   }
 
   /// Register selected items to closet

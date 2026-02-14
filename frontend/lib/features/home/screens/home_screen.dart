@@ -155,14 +155,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (state.recommendations.isNotEmpty) {
       return Column(
         children: [
-          // Weather & TPO header
-          if (state.dailyRec != null)
-            _buildContextHeader(state.dailyRec!, isDark),
-
-          // Horizontal browser with vertical swipe
+          // Horizontal browser with vertical swipe (weather/TPO integrated into card)
           Expanded(
             child: HorizontalOutfitBrowser(
               recommendations: state.recommendations,
+              weather: state.dailyRec?.weather,
+              tpo: state.dailyRec?.tpo,
               onSelectAsToday: (index, outfit) {
                 ref.read(dailyRecommendationProvider.notifier).selectAsToday(
                   index: index,
@@ -175,8 +173,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // Updated swipe instructions
-          _buildNewSwipeInstructions(isDark),
+          // Minimal swipe hint
+          _buildMinimalSwipeHint(isDark),
         ],
       );
     }
@@ -192,120 +190,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildContextHeader(dailyRec, bool isDark) {
+  Widget _buildMinimalSwipeHint(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.swipe, size: 14, color: AppColors.textMuted),
+          const SizedBox(width: 4),
+          Text(
+            '左右: 閲覧',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Icon(Icons.arrow_upward, size: 14, color: AppColors.textMuted),
+          const SizedBox(width: 4),
+          Text(
+            '上: 決定',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineWeatherTPO(dailyRec, bool isDark) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? AppColors.borderDark : AppColors.borderLight,
         ),
       ),
-      child: Column(
-        children: [
-          // Weather
-          Row(
-            children: [
-              Icon(
-                _getWeatherIcon(dailyRec.weather.condition),
-                color: AppColors.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${dailyRec.weather.temperature.toStringAsFixed(1)}°C',
-                style: AppTextStyles.h3.copyWith(
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  dailyRec.weather.description,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: isDark ? Colors.white70 : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // TPO
-          Row(
-            children: [
-              Icon(
-                Icons.event_note,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  dailyRec.tpo.summary,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: isDark ? Colors.white70 : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNewSwipeInstructions(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.1),
-        ),
-      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildInstructionItem(
-            Icons.swipe,
-            '横スクロール: 閲覧',
-            AppColors.primary,
-            isDark,
+          Icon(
+            _getWeatherIcon(dailyRec.weather.condition),
+            color: AppColors.primary,
+            size: 20,
           ),
-          _buildInstructionItem(
-            Icons.arrow_upward,
-            '上スワイプ: 決定',
-            Colors.green,
-            isDark,
+          const SizedBox(width: 8),
+          Text(
+            '${dailyRec.weather.temperature.toStringAsFixed(1)}°C',
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              dailyRec.tpo.summary,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: isDark ? Colors.white70 : AppColors.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInstructionItem(IconData icon, String label, Color color, bool isDark) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: isDark ? Colors.white70 : AppColors.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 
@@ -488,303 +441,373 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     DailyRecommendationState state,
     bool isDark,
   ) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Today's Outfit with Close Button
-          Container(
+    final imageUrl = outfit.mannequinImageUrl;
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+
+    return Column(
+      children: [
+        // Full-bleed hero card (same style as browse card)
+        Expanded(
+          flex: 5,
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(0.18),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '今日のコーデ',
-                    style: AppTextStyles.h3.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Full-bleed image
+                  if (hasImage)
+                    Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: isDark ? AppColors.surfaceDark : Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => _buildSelectedPlaceholder(isDark),
+                    )
+                  else
+                    _buildSelectedPlaceholder(isDark),
+
+                  // Top badges
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: Row(
+                      children: [
+                        // "今日のコーデ" badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.green[600]!, Colors.green[400]!],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.green.withOpacity(0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white, size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                '今日のコーデ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                      ],
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                  onPressed: () {
-                    ref.read(dailyRecommendationProvider.notifier).reset();
-                  },
-                  tooltip: '他のコーデを見る',
-                ),
-              ],
-            ),
-          ),
 
-          const SizedBox(height: 20),
-
-          // Weather & TPO context
-          if (state.dailyRec != null)
-            _buildContextHeader(state.dailyRec!, isDark),
-
-          const SizedBox(height: 16),
-
-          // Mannequin Image (always show section)
-          _buildMannequinImageSection(
-            outfit.mannequinImageUrl,
-            isDark,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Theme badge
-          _buildThemeBadge(outfit.agentType, isDark),
-
-          const SizedBox(height: 16),
-
-          // AI Score
-          _buildAIScoreDisplay(outfit.score, isDark),
-
-          const SizedBox(height: 20),
-
-          // Reasoning
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.lightbulb, color: Colors.blue, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AIの選定理由',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppColors.textPrimary,
+                  // Bottom gradient overlay with info
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: const [0.0, 0.4, 1.0],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.3),
+                            Colors.black.withOpacity(0.78),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        outfit.reasoning,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          height: 1.5,
-                          color: isDark ? Colors.white70 : AppColors.textSecondary,
+                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Weather
+                          if (state.dailyRec != null) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  _getWeatherIcon(state.dailyRec!.weather.condition),
+                                  color: Colors.white.withOpacity(0.9),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${state.dailyRec!.weather.temperature.round()}°C',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    state.dailyRec!.weather.description,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.6),
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+
+                          // Theme name
+                          Text(
+                            _getSelectedThemeLabel(outfit.agentType),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(blurRadius: 6, color: Colors.black54),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Items
+                          Text(
+                            outfit.items.map((i) => i.name).join('  /  '),
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.75),
+                              fontSize: 13,
+                              height: 1.4,
+                              shadows: const [
+                                Shadow(blurRadius: 4, color: Colors.black45),
+                              ],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Score + change button
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star, size: 16, color: Colors.amber),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${outfit.score.toInt()}点',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () {
+                                  ref.read(dailyRecommendationProvider.notifier).reset();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.swap_horiz, color: Colors.white, size: 16),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '他のコーデに変更する',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Detail section (scrollable)
+        Expanded(
+          flex: 3,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Reasoning
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.lightbulb, color: Colors.blue, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AIの選定理由',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              outfit.reasoning,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                height: 1.5,
+                                color: isDark ? Colors.white70 : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 12),
+
+                // Items
+                Text(
+                  'アイテム',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                ...outfit.items.map((item) => _buildItemCard(item, isDark)).toList(),
               ],
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Items
-          Text(
-            'アイテム',
-            style: AppTextStyles.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          ...outfit.items.map((item) => _buildItemCard(item, isDark)).toList(),
-
-          const SizedBox(height: 20),
-
-          // Action: View other recommendations
-          Center(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ref.read(dailyRecommendationProvider.notifier).reset();
-              },
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('他のコーデを見る'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildMannequinImageSection(String? imageUrl, bool isDark) {
-    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
-
+  Widget _buildSelectedPlaceholder(bool isDark) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 400,
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.backgroundDark.withOpacity(0.5)
-            : AppColors.backgroundLight,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: hasImage
-            ? Image.network(
-                imageUrl!,
-                fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => _buildImagePlaceholder(isDark),
-              )
-            : _buildImagePlaceholder(isDark),
-      ),
-    );
-  }
-
-  Widget _buildImagePlaceholder(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.checkroom_outlined,
-            size: 80,
-            color: AppColors.textMuted,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'コーディネート画像',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeBadge(String agentType, bool isDark) {
-    final themeMap = {
-      'casual': ('カジュアルスタイル', Icons.weekend, Colors.blue),
-      'formal': ('フォーマルスタイル', Icons.business, Colors.purple),
-      'balanced': ('バランス型', Icons.balance, Colors.green),
-      'unique': ('トレンド重視', Icons.star, Colors.orange),
-    };
-
-    final theme = themeMap[agentType] ?? ('スタイル', Icons.style, Colors.grey);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.$3.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.$3.withOpacity(0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [AppColors.surfaceDark, const Color(0xFF0D1520)]
+              : [Colors.grey[100]!, Colors.grey[300]!],
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(theme.$2, color: theme.$3, size: 24),
-          const SizedBox(width: 12),
-          Text(
-            theme.$1,
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: theme.$3,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIScoreDisplay(double score, bool isDark) {
-    final scoreColor = score >= 80
-        ? Colors.green
-        : score >= 60
-            ? Colors.orange
-            : Colors.red;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'AIおすすめ度',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: isDark ? Colors.white70 : AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: LinearProgressIndicator(
-                value: score / 100,
-                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                color: scoreColor,
-                minHeight: 8,
-              ),
+            Icon(
+              Icons.checkroom_outlined,
+              size: 80,
+              color: isDark ? Colors.white24 : Colors.grey[400],
             ),
-            const SizedBox(width: 12),
+            const SizedBox(height: 16),
             Text(
-              '${score.toInt()}点',
-              style: AppTextStyles.h3.copyWith(
-                color: scoreColor,
-                fontWeight: FontWeight.bold,
+              'コーディネート画像',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: isDark ? Colors.white24 : Colors.grey[400],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: List.generate(5, (index) {
-            final filled = index < (score / 20).round();
-            return Icon(
-              filled ? Icons.star : Icons.star_border,
-              size: 20,
-              color: Colors.amber,
-            );
-          }),
-        ),
-      ],
+      ),
     );
+  }
+
+  String _getSelectedThemeLabel(String agentType) {
+    switch (agentType) {
+      case 'casual':
+        return 'カジュアルスタイル';
+      case 'formal':
+        return 'フォーマルスタイル';
+      case 'balanced':
+        return 'バランス型コーデ';
+      case 'unique':
+        return 'トレンド重視コーデ';
+      default:
+        return 'おすすめコーデ';
+    }
   }
 
   Widget _buildItemCard(ClothingItem item, bool isDark) {

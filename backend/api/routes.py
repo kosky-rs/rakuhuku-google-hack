@@ -93,6 +93,14 @@ class OutfitHistorySave(BaseModel):
     worn_date: Optional[str] = None
 
 
+class SwipeRequest(BaseModel):
+    """スワイプアクション記録リクエスト"""
+    outfit_id: str
+    action: str  # "approve" or "reject"
+    outfit_details: dict
+    user_id: str = "demo_user"
+
+
 # ==================== ヘルスチェック ====================
 
 @router.get("/health")
@@ -628,28 +636,14 @@ async def regenerate_daily_outfits(
 
 
 @router.post("/outfit/swipe")
-async def record_outfit_swipe(
-    outfit_id: str,
-    action: str,  # "approve" or "reject"
-    outfit_details: dict,
-    user_id: str = "demo_user",
-):
+async def record_outfit_swipe(request: SwipeRequest):
     """
     スワイプアクション（承認/拒否）を記録
 
     - ユーザー嗜好プロファイルを自動更新
     - swipe_historyに記録
-
-    Args:
-        outfit_id: Outfit ID
-        action: "approve" または "reject"
-        outfit_details: コーデ詳細（agent_type, items, score, source）
-        user_id: User ID
-
-    Returns:
-        {"message": "記録しました", "action": action}
     """
-    if action not in ["approve", "reject"]:
+    if request.action not in ["approve", "reject"]:
         raise HTTPException(
             status_code=400,
             detail={"message": "Invalid action. Must be 'approve' or 'reject'"}
@@ -657,18 +651,18 @@ async def record_outfit_swipe(
 
     try:
         await record_swipe(
-            user_id=user_id,
-            outfit_id=outfit_id,
-            action=action,
-            outfit_details=outfit_details,
+            user_id=request.user_id,
+            outfit_id=request.outfit_id,
+            action=request.action,
+            outfit_details=request.outfit_details,
         )
 
-        logger.info(f"Recorded {action} swipe for user {user_id}, outfit {outfit_id}")
+        logger.info(f"Recorded {request.action} swipe for user {request.user_id}, outfit {request.outfit_id}")
 
         return {
             "message": "スワイプを記録しました",
-            "action": action,
-            "outfit_id": outfit_id,
+            "action": request.action,
+            "outfit_id": request.outfit_id,
         }
 
     except Exception as e:

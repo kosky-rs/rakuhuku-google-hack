@@ -9,6 +9,8 @@ from agent.style_agents import (
     BalancedStyleAgent,
     UniqueStyleAgent,
 )
+from agent.tools.closet import get_closet_items
+
 logger = logging.getLogger(__name__)
 
 # Import nano_banana with fallback
@@ -68,10 +70,19 @@ class OutfitOrchestrator:
         Returns:
             list: Top 5 outfit recommendations (sorted by score)
         """
+        # Pre-fetch closet items once for all agents (optimization)
+        try:
+            closet_items = await get_closet_items(user_id=user_id)
+            logger.info(f"Pre-fetched {len(closet_items)} closet items for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to fetch closet items: {e}")
+            closet_items = []
+
         context = {
             "weather": weather,
             "tpo": tpo,
             "user_preferences": user_preferences,
+            "closet_items": closet_items,
         }
 
         logger.info(f"Starting multi-agent outfit generation for user {user_id}")
@@ -119,12 +130,16 @@ class OutfitOrchestrator:
 
                 if NANO_BANANA_AVAILABLE:
                     items = outfit.get("items", [])
-                    # Generate image (or get placeholder)
+                    reasoning = outfit.get("reasoning", "")
+                    image_prompt_en = outfit.get("image_prompt_en", "")
+                    # Generate image from outfit description
                     image_url = generate_outfit_mannequin_image(
                         items=items,
                         weather=weather,
                         style=agent_type,
                         gender=gender,
+                        reasoning=reasoning,
+                        image_prompt_en=image_prompt_en,
                     )
                 else:
                     # Fallback: generate placeholder directly

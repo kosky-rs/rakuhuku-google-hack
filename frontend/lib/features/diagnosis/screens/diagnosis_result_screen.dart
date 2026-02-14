@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../config/theme.dart';
 import '../../../config/router.dart';
+import '../../../core/models/clothing_item.dart';
 import '../../closet/providers/closet_provider.dart';
 import '../providers/diagnosis_provider.dart';
 
@@ -657,11 +658,28 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
 
   Widget _buildItemsTab(List<dynamic> items, bool isDark) {
     final diagnosisState = ref.watch(diagnosisProvider);
+    final deduplicatedItems = diagnosisState.deduplicatedItems;
+
+    // Group by ClothingCategory in enum order
+    final Map<ClothingCategory, List<Map<String, dynamic>>> grouped = {};
+    for (final cat in ClothingCategory.values) {
+      grouped[cat] = [];
+    }
+    for (final item in deduplicatedItems) {
+      final categoryStr = (item['category'] as String? ?? 'tops').toLowerCase();
+      final cat = ClothingCategory.fromString(categoryStr);
+      grouped[cat]!.add(item);
+    }
+
+    // Filter out empty categories
+    final nonEmptyCategories = ClothingCategory.values
+        .where((cat) => grouped[cat]!.isNotEmpty)
+        .toList();
 
     return Column(
       children: [
         Expanded(
-          child: items.isEmpty
+          child: nonEmptyCategories.isEmpty
               ? Center(
                   child: Text(
                     'アイテムが検出されませんでした',
@@ -670,13 +688,19 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
                     ),
                   ),
                 )
-              : ListView.builder(
+              : ListView(
                   padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index] as Map<String, dynamic>;
-                    return _buildItemCard(item, isDark);
-                  },
+                  children: [
+                    for (final cat in nonEmptyCategories) ...[
+                      _buildCategoryHeader(cat, isDark),
+                      for (final item in grouped[cat]!)
+                        _buildItemCard(
+                          item,
+                          isDark,
+                          cat != ClothingCategory.accessories,
+                        ),
+                    ],
+                  ],
                 ),
         ),
         _buildRegisterButton(items, diagnosisState, isDark),
@@ -684,12 +708,42 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
     );
   }
 
-  Widget _buildItemCard(Map<String, dynamic> item, bool isDark) {
+  Widget _buildCategoryHeader(ClothingCategory category, bool isDark) {
+    final isSingleSelect = category != ClothingCategory.accessories;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Row(
+        children: [
+          Text(
+            category.label,
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            isSingleSelect ? '(1つ選択)' : '(複数選択可)',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemCard(Map<String, dynamic> item, bool isDark, bool isSingleSelect) {
     final name = item['name'] ?? '不明';
     final category = item['category'] ?? '';
     final color = item['color'] ?? '';
     final croppedImage = item['cropped_image_base64'] as String?;
     final isSelected = ref.read(diagnosisProvider.notifier).isItemSelected(item);
+
+    // Map category to Japanese label
+    final categoryLabel = category.toString().isNotEmpty
+        ? ClothingCategory.fromString(category).label
+        : '';
 
     return GestureDetector(
       onTap: () => ref.read(diagnosisProvider.notifier).toggleItemSelection(item),
@@ -706,22 +760,47 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
         ),
         child: Row(
           children: [
-            // Checkbox
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.textMuted,
-                  width: 2,
+            // Selection indicator: radio for single-select, checkbox for multi-select
+            if (isSingleSelect)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.textMuted,
+                    width: 2,
+                  ),
                 ),
+                child: isSelected
+                    ? Center(
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      )
+                    : null,
+              )
+            else
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.textMuted,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    : null,
               ),
-              child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-            ),
             const SizedBox(width: 12),
 
             // Image
@@ -758,32 +837,13 @@ class _DiagnosisResultScreenState extends ConsumerState<DiagnosisResultScreen> {
                       color: isDark ? Colors.white : AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (category.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            category,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      if (color.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          color,
-                          style: AppTextStyles.caption,
-                        ),
-                      ],
-                    ],
-                  ),
+                  if (color.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      color,
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
                 ],
               ),
             ),

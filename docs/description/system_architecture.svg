@@ -1,0 +1,321 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" width="1200" height="920" font-family="'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <!-- Arrow marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5F6368"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4285F4"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34A853"/>
+    </marker>
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#00000020"/>
+    </filter>
+    <!-- Parallel execution badge background -->
+    <linearGradient id="parallelGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#EA4335"/>
+      <stop offset="100%" stop-color="#FBBC05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="920" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#202124">Rakufuku - AI Outfit Recommendation System Architecture</text>
+  <text x="600" y="56" text-anchor="middle" font-size="13" fill="#5F6368">Multi-Agent + Gemini + Imagen 4 Fast on Google Cloud</text>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 1: User / Frontend -->
+  <!-- ============================================================= -->
+  <rect x="30" y="72" width="1140" height="82" rx="12" fill="none" stroke="#4285F4" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="92" font-size="11" fill="#4285F4" font-weight="bold">Layer 1 : ユーザー / フロントエンド</text>
+
+  <!-- User icon -->
+  <g transform="translate(160,96)">
+    <rect x="-40" y="-6" width="80" height="52" rx="10" fill="#E8F0FE" stroke="#4285F4" stroke-width="1.5" filter="url(#shadow)"/>
+    <!-- Simple phone icon -->
+    <rect x="-10" y="2" width="20" height="34" rx="3" fill="#4285F4" opacity="0.2" stroke="#4285F4" stroke-width="1"/>
+    <line x1="-3" y1="30" x2="3" y2="30" stroke="#4285F4" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="0" y="52" text-anchor="middle" font-size="10" fill="#202124" font-weight="600">ユーザー</text>
+  </g>
+
+  <!-- Arrow User -> Flutter -->
+  <line x1="210" y1="120" x2="360" y2="120" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Flutter Web App -->
+  <g transform="translate(480,96)">
+    <rect x="-110" y="-6" width="220" height="52" rx="10" fill="#E8F0FE" stroke="#4285F4" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="16" text-anchor="middle" font-size="14" font-weight="bold" fill="#4285F4">Flutter Web App</text>
+    <text x="0" y="32" text-anchor="middle" font-size="10" fill="#5F6368">スワイプUI / コーデ診断 / クローゼット管理</text>
+    <text x="0" y="52" text-anchor="middle" font-size="9" fill="#80868B">Dart / Flutter 3.x</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 2: Backend -->
+  <!-- ============================================================= -->
+  <rect x="30" y="164" width="1140" height="82" rx="12" fill="none" stroke="#34A853" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="184" font-size="11" fill="#34A853" font-weight="bold">Layer 2 : バックエンド (Cloud Run)</text>
+
+  <!-- Arrow Flutter -> FastAPI -->
+  <line x1="480" y1="148" x2="380" y2="190" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="415" y="163" font-size="9" fill="#80868B">REST API</text>
+
+  <!-- FastAPI -->
+  <g transform="translate(280,196)">
+    <rect x="-100" y="-14" width="200" height="44" rx="10" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="bold" fill="#34A853">FastAPI</text>
+    <text x="0" y="22" text-anchor="middle" font-size="10" fill="#5F6368">routes.py - APIエンドポイント</text>
+  </g>
+
+  <!-- Arrow FastAPI -> Integration Helper -->
+  <line x1="390" y1="196" x2="508" y2="196" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Integration Helper -->
+  <g transform="translate(640,196)">
+    <rect x="-120" y="-14" width="240" height="44" rx="10" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="bold" fill="#34A853">Integration Helper</text>
+    <text x="0" y="22" text-anchor="middle" font-size="10" fill="#5F6368">天気・カレンダー・嗜好統合 + キャッシュ</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 3: AI Orchestration -->
+  <!-- ============================================================= -->
+  <rect x="30" y="256" width="1140" height="148" rx="12" fill="none" stroke="#EA4335" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="276" font-size="11" fill="#EA4335" font-weight="bold">Layer 3 : AI オーケストレーション (マルチエージェント)</text>
+
+  <!-- Arrow Integration Helper -> Orchestrator -->
+  <line x1="640" y1="230" x2="380" y2="296" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Orchestrator -->
+  <g transform="translate(280,300)">
+    <rect x="-110" y="-14" width="220" height="44" rx="10" fill="#FCE8E6" stroke="#EA4335" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="bold" fill="#EA4335">OutfitOrchestrator</text>
+    <text x="0" y="22" text-anchor="middle" font-size="10" fill="#5F6368">スコアリング・ランキング・多様性保証</text>
+  </g>
+
+  <!-- Parallel execution badge -->
+  <rect x="408" y="313" width="78" height="20" rx="10" fill="url(#parallelGrad)" opacity="0.9"/>
+  <text x="447" y="327" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">並列実行</text>
+
+  <!-- Arrow Orchestrator -> Agents (fan-out) -->
+  <line x1="395" y1="310" x2="508" y2="310" stroke="#EA4335" stroke-width="1.5" marker-end="url(#arrow-blue)" stroke-dasharray="4 2"/>
+  <!-- fan lines -->
+  <line x1="500" y1="310" x2="538" y2="282" stroke="#EA4335" stroke-width="1" opacity="0.5"/>
+  <line x1="500" y1="310" x2="538" y2="302" stroke="#EA4335" stroke-width="1" opacity="0.5"/>
+  <line x1="500" y1="310" x2="538" y2="322" stroke="#EA4335" stroke-width="1" opacity="0.5"/>
+  <line x1="500" y1="310" x2="538" y2="342" stroke="#EA4335" stroke-width="1" opacity="0.5"/>
+
+  <!-- 4 Style Agents (parallel) -->
+  <!-- Casual -->
+  <g transform="translate(610,282)">
+    <rect x="-68" y="-14" width="136" height="34" rx="8" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="2" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">Casual Agent</text>
+    <text x="0" y="14" text-anchor="middle" font-size="8" fill="#5F6368">カジュアル専門</text>
+  </g>
+  <!-- Formal -->
+  <g transform="translate(770,282)">
+    <rect x="-68" y="-14" width="136" height="34" rx="8" fill="#E3F2FD" stroke="#1976D2" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="2" text-anchor="middle" font-size="11" font-weight="bold" fill="#0D47A1">Formal Agent</text>
+    <text x="0" y="14" text-anchor="middle" font-size="8" fill="#5F6368">フォーマル専門</text>
+  </g>
+  <!-- Balanced -->
+  <g transform="translate(930,282)">
+    <rect x="-68" y="-14" width="136" height="34" rx="8" fill="#E8F5E9" stroke="#388E3C" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="2" text-anchor="middle" font-size="11" font-weight="bold" fill="#1B5E20">Balanced Agent</text>
+    <text x="0" y="14" text-anchor="middle" font-size="8" fill="#5F6368">バランス専門</text>
+  </g>
+  <!-- Unique -->
+  <g transform="translate(1090,282)">
+    <rect x="-68" y="-14" width="136" height="34" rx="8" fill="#F3E5F5" stroke="#7B1FA2" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="2" text-anchor="middle" font-size="11" font-weight="bold" fill="#4A148C">Unique Agent</text>
+    <text x="0" y="14" text-anchor="middle" font-size="8" fill="#5F6368">トレンド・個性派</text>
+  </g>
+
+  <!-- asyncio.gather label -->
+  <text x="850" y="336" text-anchor="middle" font-size="9" fill="#EA4335" font-style="italic">asyncio.gather() - 4エージェント同時実行</text>
+
+  <!-- Bracket for parallel agents -->
+  <path d="M 542 268 L 538 268 L 538 340 L 542 340" fill="none" stroke="#EA4335" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 4: AI Tools -->
+  <!-- ============================================================= -->
+  <rect x="30" y="414" width="1140" height="92" rx="12" fill="none" stroke="#FBBC05" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="434" font-size="11" fill="#B06D00" font-weight="bold">Layer 4 : AI ツール群</text>
+
+  <!-- Arrows from agents down to tools -->
+  <line x1="700" y1="320" x2="700" y2="414" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.5"/>
+
+  <!-- Gemini Outfit Composer -->
+  <g transform="translate(170,460)">
+    <rect x="-120" y="-18" width="240" height="40" rx="8" fill="#FFF8E1" stroke="#FBBC05" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="-1" text-anchor="middle" font-size="12" font-weight="bold" fill="#B06D00">Gemini Outfit Composer</text>
+    <text x="0" y="14" text-anchor="middle" font-size="9" fill="#5F6368">LLMによるコーデ構成・推論</text>
+  </g>
+
+  <!-- Imagen 4 Fast -->
+  <g transform="translate(450,460)">
+    <rect x="-105" y="-18" width="210" height="40" rx="8" fill="#FFF8E1" stroke="#FBBC05" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="-1" text-anchor="middle" font-size="12" font-weight="bold" fill="#B06D00">Imagen 4 Fast</text>
+    <text x="0" y="14" text-anchor="middle" font-size="9" fill="#5F6368">マネキン画像生成</text>
+  </g>
+
+  <!-- Outfit Analyzer -->
+  <g transform="translate(710,460)">
+    <rect x="-105" y="-18" width="210" height="40" rx="8" fill="#FFF8E1" stroke="#FBBC05" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="-1" text-anchor="middle" font-size="12" font-weight="bold" fill="#B06D00">Outfit Analyzer</text>
+    <text x="0" y="14" text-anchor="middle" font-size="9" fill="#5F6368">コーデ診断 (Vision API)</text>
+  </g>
+
+  <!-- Preference Learner -->
+  <g transform="translate(980,460)">
+    <rect x="-110" y="-18" width="220" height="40" rx="8" fill="#FFF8E1" stroke="#FBBC05" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="0" y="-1" text-anchor="middle" font-size="12" font-weight="bold" fill="#B06D00">Preference Learner</text>
+    <text x="0" y="14" text-anchor="middle" font-size="9" fill="#5F6368">スワイプ嗜好学習</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 5: Google Cloud Services -->
+  <!-- ============================================================= -->
+  <rect x="30" y="518" width="1140" height="170" rx="12" fill="none" stroke="#4285F4" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="538" font-size="11" fill="#4285F4" font-weight="bold">Layer 5 : Google Cloud Platform</text>
+
+  <!-- Arrows from Tools to GCP -->
+  <line x1="300" y1="500" x2="300" y2="555" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+  <line x1="550" y1="500" x2="550" y2="555" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+  <line x1="710" y1="500" x2="710" y2="555" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+  <line x1="980" y1="500" x2="900" y2="555" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+
+  <!-- Vertex AI group -->
+  <rect x="55" y="550" width="520" height="126" rx="10" fill="#EBF3FF" stroke="#4285F4" stroke-width="1.2" opacity="0.7"/>
+  <text x="75" y="570" font-size="12" font-weight="bold" fill="#4285F4">Vertex AI</text>
+
+  <!-- Gemini 2.0 Flash -->
+  <g transform="translate(160,598)">
+    <rect x="-80" y="-16" width="160" height="34" rx="8" fill="#FFFFFF" stroke="#4285F4" stroke-width="1.2"/>
+    <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="bold" fill="#1A73E8">Gemini 2.0 Flash</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">コーデ構成・推論</text>
+  </g>
+
+  <!-- Gemini 2.5 Flash (for analyzer) -->
+  <g transform="translate(370,598)">
+    <rect x="-80" y="-16" width="160" height="34" rx="8" fill="#FFFFFF" stroke="#4285F4" stroke-width="1.2"/>
+    <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="bold" fill="#1A73E8">Gemini 2.5 Flash</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">コーデ診断</text>
+  </g>
+
+  <!-- Imagen 4 Fast -->
+  <g transform="translate(265,650)">
+    <rect x="-80" y="-16" width="160" height="34" rx="8" fill="#FFFFFF" stroke="#4285F4" stroke-width="1.2"/>
+    <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="bold" fill="#1A73E8">Imagen 4 Fast</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">画像生成モデル</text>
+  </g>
+
+  <!-- Cloud Vision API -->
+  <g transform="translate(710,582)">
+    <rect x="-100" y="-16" width="200" height="36" rx="8" fill="#FFFFFF" stroke="#4285F4" stroke-width="1.2" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" font-size="12" font-weight="bold" fill="#1A73E8">Cloud Vision API</text>
+    <text x="0" y="14" text-anchor="middle" font-size="9" fill="#5F6368">画像認識・アイテム検出</text>
+  </g>
+
+  <!-- Firebase group -->
+  <rect x="608" y="624" width="550" height="54" rx="10" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.2" opacity="0.6"/>
+  <text x="628" y="642" font-size="12" font-weight="bold" fill="#E65100">Firebase</text>
+
+  <!-- Firestore -->
+  <g transform="translate(730,654)">
+    <rect x="-55" y="-14" width="110" height="28" rx="6" fill="#FFFFFF" stroke="#FB8C00" stroke-width="1"/>
+    <text x="0" y="1" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">Firestore</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" fill="#5F6368">ユーザーデータ</text>
+  </g>
+
+  <!-- Cloud Storage -->
+  <g transform="translate(880,654)">
+    <rect x="-60" y="-14" width="120" height="28" rx="6" fill="#FFFFFF" stroke="#FB8C00" stroke-width="1"/>
+    <text x="0" y="1" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">Cloud Storage</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" fill="#5F6368">画像保存</text>
+  </g>
+
+  <!-- Auth -->
+  <g transform="translate(1040,654)">
+    <rect x="-55" y="-14" width="110" height="28" rx="6" fill="#FFFFFF" stroke="#FB8C00" stroke-width="1"/>
+    <text x="0" y="1" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">Firebase Auth</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" fill="#5F6368">認証</text>
+  </g>
+
+  <!-- Cloud Run label -->
+  <g transform="translate(1100,570)">
+    <rect x="-55" y="-14" width="110" height="34" rx="8" fill="#FFFFFF" stroke="#4285F4" stroke-width="1.2" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="bold" fill="#1A73E8">Cloud Run</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">コンテナ実行</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 6: External APIs -->
+  <!-- ============================================================= -->
+  <rect x="30" y="700" width="1140" height="76" rx="12" fill="none" stroke="#34A853" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.5"/>
+  <text x="48" y="720" font-size="11" fill="#34A853" font-weight="bold">Layer 6 : 外部 API</text>
+
+  <!-- Arrows from Layer 2 / tools to External APIs -->
+  <line x1="200" y1="688" x2="200" y2="728" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+  <line x1="600" y1="688" x2="600" y2="728" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+  <line x1="1000" y1="688" x2="1000" y2="728" stroke="#5F6368" stroke-width="1.2" marker-end="url(#arrow)" opacity="0.4"/>
+
+  <!-- OpenWeather API -->
+  <g transform="translate(200,748)">
+    <rect x="-110" y="-16" width="220" height="34" rx="8" fill="#E8F5E9" stroke="#34A853" stroke-width="1.2" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">OpenWeather API</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">天気情報取得</text>
+  </g>
+
+  <!-- Google Calendar API -->
+  <g transform="translate(600,748)">
+    <rect x="-110" y="-16" width="220" height="34" rx="8" fill="#E8F5E9" stroke="#34A853" stroke-width="1.2" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">Google Calendar API</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">予定取得 → TPO判定</text>
+  </g>
+
+  <!-- Rakuten API -->
+  <g transform="translate(1000,748)">
+    <rect x="-110" y="-16" width="220" height="34" rx="8" fill="#E8F5E9" stroke="#34A853" stroke-width="1.2" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">楽天市場 API</text>
+    <text x="0" y="13" text-anchor="middle" font-size="9" fill="#5F6368">外部商品検索・購入提案</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- Data Flow Highlight (right side) -->
+  <!-- ============================================================= -->
+  <g transform="translate(20,800)">
+    <rect x="0" y="0" width="1160" height="108" rx="10" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1"/>
+
+    <text x="20" y="22" font-size="12" font-weight="bold" fill="#202124">データフロー概要</text>
+
+    <!-- Flow 1 -->
+    <rect x="20" y="34" width="12" height="12" rx="2" fill="#4285F4"/>
+    <text x="40" y="44" font-size="10" fill="#3C4043">ユーザーリクエスト → FastAPI → Integration Helper（天気・カレンダー・嗜好を統合）</text>
+
+    <!-- Flow 2 -->
+    <rect x="20" y="54" width="12" height="12" rx="2" fill="#EA4335"/>
+    <text x="40" y="64" font-size="10" fill="#3C4043">Integration Helper → OutfitOrchestrator → 4 Style Agents が asyncio.gather() で並列実行</text>
+
+    <!-- Flow 3 -->
+    <rect x="20" y="74" width="12" height="12" rx="2" fill="#FBBC05"/>
+    <text x="40" y="84" font-size="10" fill="#3C4043">各Agent → Gemini 2.0 Flash でコーデ構成 → Imagen 4 Fast でマネキン画像生成 → スコアリング → Top 5 を返却</text>
+
+    <!-- Flow 4 -->
+    <rect x="20" y="94" width="12" height="12" rx="2" fill="#34A853"/>
+    <text x="40" y="104" font-size="10" fill="#3C4043">スワイプフィードバック → Preference Learner → Firestore に嗜好プロファイル保存 → 次回提案に反映</text>
+
+    <!-- Key tech -->
+    <text x="880" y="44" font-size="10" font-weight="bold" fill="#5F6368">主要技術:</text>
+    <text x="880" y="60" font-size="9" fill="#5F6368">Google ADK / Vertex AI / Gemini 2.0 Flash</text>
+    <text x="880" y="74" font-size="9" fill="#5F6368">Imagen 4 Fast / Cloud Vision API</text>
+    <text x="880" y="88" font-size="9" fill="#5F6368">Firebase (Firestore, Storage, Auth)</text>
+    <text x="880" y="102" font-size="9" fill="#5F6368">Cloud Run / FastAPI / Flutter Web</text>
+  </g>
+
+</svg>
