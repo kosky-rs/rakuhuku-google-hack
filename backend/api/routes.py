@@ -106,7 +106,7 @@ class SwipeRequest(BaseModel):
 @router.get("/health")
 async def health_check():
     """ヘルスチェックエンドポイント"""
-    return {"status": "healthy", "service": "poltan-api"}
+    return {"status": "healthy", "service": "rakufuku-api"}
 
 
 @router.post("/debug/clear-cache/{user_id}")

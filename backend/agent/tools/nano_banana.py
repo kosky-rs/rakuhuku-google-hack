@@ -19,7 +19,7 @@ from firebase_admin import storage
 logger = logging.getLogger(__name__)
 
 # Configure Vertex AI (環境変数名・デフォルト値はmain.pyと統一)
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 LOCATION = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
 ENABLE_NANO_BANANA = os.getenv("ENABLE_NANO_BANANA", "false").lower() == "true"
 

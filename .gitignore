@@ -19,4 +19,5 @@ INTEGRATION_TEST_REPORT.md
 .firebaserc
 frontend/.firebaserc
 frontend/lib/firebase_options.dart
+frontend/firebase.json
 cors.json

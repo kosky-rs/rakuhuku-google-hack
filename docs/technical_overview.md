@@ -137,7 +137,7 @@ AGENT_CONFIG = {
         "max_output_tokens": 2048,
         "temperature": 0.7,
     },
-    "project": "rakufuku-pwa",       # GCPプロジェクト
+    "project": "your-gcp-project",    # GCPプロジェクト
     "location": "asia-northeast1",    # 東京リージョン
 }
 ```

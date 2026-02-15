@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     # Vertex AI 初期化
     try:
         import vertexai
-        project_id = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+        project_id = os.getenv("GCP_PROJECT_ID", "")
         location = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
         vertexai.init(project=project_id, location=location)
         print(f"Vertex AI initialized (project={project_id}, location={location})")

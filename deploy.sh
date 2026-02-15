@@ -12,8 +12,9 @@ set -e
 # ==============================================================
 
 PROJECT_ID="${GCP_PROJECT_ID:?Error: GCP_PROJECT_ID is not set}"
+BACKEND_SERVICE="${BACKEND_SERVICE_NAME:-rakufuku-api}"
 REGION="asia-northeast1"
-BACKEND_IMAGE="asia-northeast1-docker.pkg.dev/${PROJECT_ID}/rakufuku-api/rakufuku:latest"
+BACKEND_IMAGE="asia-northeast1-docker.pkg.dev/${PROJECT_ID}/${BACKEND_SERVICE}/rakufuku:latest"
 
 echo "📋 Project: ${PROJECT_ID}"
 echo "📋 Region: ${REGION}"
@@ -23,10 +24,10 @@ deploy_backend() {
   echo "🚀 === Backend (Cloud Run) デプロイ ==="
 
   # Artifact Registry リポジトリ作成（初回のみ）
-  gcloud artifacts repositories describe rakufuku-api \
+  gcloud artifacts repositories describe ${BACKEND_SERVICE} \
     --project="${PROJECT_ID}" \
     --location="${REGION}" 2>/dev/null || \
-  gcloud artifacts repositories create rakufuku-api \
+  gcloud artifacts repositories create ${BACKEND_SERVICE} \
     --project="${PROJECT_ID}" \
     --repository-format=docker \
     --location="${REGION}" \
@@ -41,7 +42,7 @@ deploy_backend() {
 
   # Cloud Run デプロイ
   echo "🚀 Deploying to Cloud Run..."
-  gcloud run deploy rakufuku-api \
+  gcloud run deploy ${BACKEND_SERVICE} \
     --project="${PROJECT_ID}" \
     --image "${BACKEND_IMAGE}" \
     --region "${REGION}" \
@@ -56,7 +57,7 @@ deploy_backend() {
     --timeout 60
 
   # Cloud Run URL を取得
-  BACKEND_URL=$(gcloud run services describe rakufuku-api \
+  BACKEND_URL=$(gcloud run services describe ${BACKEND_SERVICE} \
     --project="${PROJECT_ID}" \
     --region="${REGION}" \
     --format='value(status.url)')
@@ -71,7 +72,7 @@ deploy_frontend() {
   echo "🚀 === Frontend (Firebase Hosting) デプロイ ==="
 
   # Cloud Run URL を取得
-  BACKEND_URL=$(gcloud run services describe rakufuku-api \
+  BACKEND_URL=$(gcloud run services describe ${BACKEND_SERVICE} \
     --project="${PROJECT_ID}" \
     --region="${REGION}" \
     --format='value(status.url)' 2>/dev/null || echo "")
@@ -79,7 +80,7 @@ deploy_frontend() {
   if [ -z "${BACKEND_URL}" ]; then
     echo "⚠️  Cloud Run URL not found. Deploy backend first or set API_BASE_URL manually."
     echo "   Using placeholder URL..."
-    BACKEND_URL="https://rakufuku-api-xxxxx-an.a.run.app"
+    BACKEND_URL="https://YOUR_CLOUD_RUN_URL"
   fi
 
   API_BASE_URL="${BACKEND_URL}/api/v1"
@@ -116,7 +117,8 @@ case "${1}" in
     echo "Usage: ./deploy.sh [backend|frontend|all]"
     echo ""
     echo "Environment variables:"
-    echo "  GCP_PROJECT_ID  - Google Cloud Project ID (required)"
+    echo "  GCP_PROJECT_ID       - Google Cloud Project ID (required)"
+  echo "  BACKEND_SERVICE_NAME - Cloud Run service name (default: rakufuku-api)"
     exit 1
     ;;
 esac

@@ -17,7 +17,7 @@ from vertexai.generative_models import GenerativeModel, GenerationConfig
 logger = logging.getLogger(__name__)
 
 # Configuration (shared with nano_banana.py / adk_config.py)
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 LOCATION = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
 MODEL_NAME = os.getenv("ADK_MODEL_NAME", "gemini-2.0-flash-001")
 

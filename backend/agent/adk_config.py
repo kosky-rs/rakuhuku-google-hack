@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 # GCP Project Configuration
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "rakufuku-pwa")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 LOCATION = os.getenv("VERTEX_AI_LOCATION", "asia-northeast1")
 
 # Model Configuration

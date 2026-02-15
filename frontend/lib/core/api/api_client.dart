@@ -21,7 +21,8 @@ class ApiClient {
     if (envUrl.isNotEmpty) return envUrl;
 
     // 本番URL
-    if (kIsWeb) return 'https://rakufuku-api-1024882237054.asia-northeast1.run.app/api/v1';
+    // 本番URLは --dart-define=API_BASE_URL=xxx で指定してください
+    if (kIsWeb) return 'http://localhost:8000/api/v1';
 
     // ローカル開発
     return 'http://localhost:8000/api/v1';
