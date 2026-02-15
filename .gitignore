@@ -7,6 +7,9 @@
 
 # Docs (internal)
 docs/description/
+TROUBLESHOOTING.md
+IMPLEMENTATION_COMPLETE.md
+INTEGRATION_TEST_REPORT.md
 
 # Firebase
 .firebase/
