@@ -5,11 +5,18 @@
 .vscode/
 .idea/
 
+# Claude Code (internal)
+.claude/
+
 # Docs (internal)
 docs/description/
 TROUBLESHOOTING.md
 IMPLEMENTATION_COMPLETE.md
 INTEGRATION_TEST_REPORT.md
 
-# Firebase
+# Firebase / GCP credentials
 .firebase/
+.firebaserc
+frontend/.firebaserc
+frontend/lib/firebase_options.dart
+cors.json
