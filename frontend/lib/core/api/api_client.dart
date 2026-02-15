@@ -236,6 +236,18 @@ class ApiClient {
     }
   }
 
+  /// 天気情報を先行取得（daily_recommendation.Weather型で返す）
+  Future<daily.Weather> prefetchWeather({
+    double latitude = 35.6762,
+    double longitude = 139.6503,
+  }) async {
+    final response = await _dio.get('/weather', queryParameters: {
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+    return daily.Weather.fromJson(response.data);
+  }
+
   // ==================== Calendar ====================
 
   Future<Map<String, dynamic>> getCalendar({
@@ -251,6 +263,19 @@ class ApiClient {
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
+  }
+
+  /// カレンダーTPO情報を先行取得
+  Future<daily.TPO> prefetchCalendarTPO({
+    String userId = 'demo_user',
+    String? targetDate,
+  }) async {
+    final response = await _dio.get('/calendar', queryParameters: {
+      'user_id': userId,
+      if (targetDate != null) 'target_date': targetDate,
+    });
+    final tpoData = response.data['tpo'] as Map<String, dynamic>;
+    return daily.TPO.fromJson(tpoData);
   }
 
   // ==================== Outfit Diagnosis ====================

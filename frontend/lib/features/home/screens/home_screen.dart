@@ -21,7 +21,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Fetch daily recommendations on first load
     Future.microtask(() {
-      ref.read(dailyRecommendationProvider.notifier).fetchDailyRecommendations();
+      final notifier = ref.read(dailyRecommendationProvider.notifier);
+      notifier.prefetchWeatherAndCalendar(); // 先行取得（軽量）
+      notifier.fetchDailyRecommendations(); // 既存フロー（変更なし）
     });
   }
 
@@ -120,10 +122,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Loading state
     if (state.isLoading) {
+      final prefetchedWeather = state.prefetchedWeather;
+      final prefetchedTpo = state.prefetchedTpo;
+
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // プリフェッチされた天気・TPO情報を先行表示
+            if (prefetchedWeather != null || prefetchedTpo != null) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (prefetchedWeather != null)
+                      Row(
+                        children: [
+                          Icon(
+                            _getWeatherIcon(prefetchedWeather.condition),
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${prefetchedWeather.temperature.round()}°C',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              prefetchedWeather.description,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: isDark ? Colors.white70 : AppColors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (prefetchedWeather != null && prefetchedTpo != null)
+                      const SizedBox(height: 8),
+                    if (prefetchedTpo != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_month,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              prefetchedTpo.summary,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: isDark ? Colors.white70 : AppColors.textSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
             Text(
@@ -159,8 +235,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Expanded(
             child: HorizontalOutfitBrowser(
               recommendations: state.recommendations,
-              weather: state.dailyRec?.weather,
-              tpo: state.dailyRec?.tpo,
+              weather: state.dailyRec?.weather ?? state.prefetchedWeather,
+              tpo: state.dailyRec?.tpo ?? state.prefetchedTpo,
               onSelectAsToday: (index, outfit) {
                 ref.read(dailyRecommendationProvider.notifier).selectAsToday(
                   index: index,
@@ -901,7 +977,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showCalendarDialog(BuildContext context, DailyRecommendationState state) {
-    final tpo = state.dailyRec?.tpo;
+    final tpo = state.dailyRec?.tpo ?? state.prefetchedTpo;
     if (tpo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('予定情報を取得できませんでした')),

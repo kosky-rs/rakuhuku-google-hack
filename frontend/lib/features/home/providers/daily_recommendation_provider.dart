@@ -32,6 +32,8 @@ class DailyRecommendationState {
   final bool allRejected;
   final bool isTierLimited;
   final OutfitRecommendation? selectedTodayOutfit;
+  final Weather? prefetchedWeather;
+  final TPO? prefetchedTpo;
 
   const DailyRecommendationState({
     this.dailyRec,
@@ -41,6 +43,8 @@ class DailyRecommendationState {
     this.allRejected = false,
     this.isTierLimited = false,
     this.selectedTodayOutfit,
+    this.prefetchedWeather,
+    this.prefetchedTpo,
   });
 
   int get generationsRemaining => dailyRec?.generationsRemaining ?? 0;
@@ -57,6 +61,8 @@ class DailyRecommendationState {
     bool? isTierLimited,
     OutfitRecommendation? selectedTodayOutfit,
     bool clearSelectedOutfit = false,
+    Weather? prefetchedWeather,
+    TPO? prefetchedTpo,
   }) {
     return DailyRecommendationState(
       dailyRec: dailyRec ?? this.dailyRec,
@@ -66,6 +72,8 @@ class DailyRecommendationState {
       allRejected: allRejected ?? this.allRejected,
       isTierLimited: isTierLimited ?? this.isTierLimited,
       selectedTodayOutfit: clearSelectedOutfit ? null : (selectedTodayOutfit ?? this.selectedTodayOutfit),
+      prefetchedWeather: prefetchedWeather ?? this.prefetchedWeather,
+      prefetchedTpo: prefetchedTpo ?? this.prefetchedTpo,
     );
   }
 }
@@ -78,6 +86,22 @@ class DailyRecommendationNotifier
 
   DailyRecommendationNotifier(this._apiClient, this._userId)
       : super(const DailyRecommendationState());
+
+  /// 天気・カレンダー情報を先行取得（best-effort）
+  Future<void> prefetchWeatherAndCalendar() async {
+    try {
+      final results = await Future.wait([
+        _apiClient.prefetchWeather(),
+        _apiClient.prefetchCalendarTPO(userId: _userId),
+      ]);
+      state = state.copyWith(
+        prefetchedWeather: results[0] as Weather,
+        prefetchedTpo: results[1] as TPO,
+      );
+    } catch (e) {
+      // best-effort - 失敗しても既存フローに影響しない
+    }
+  }
 
   /// Fetch daily recommendations
   Future<void> fetchDailyRecommendations() async {
@@ -328,12 +352,14 @@ final dailyRecommendationProvider = StateNotifierProvider<
   return DailyRecommendationNotifier(apiClient, userId);
 });
 
-/// Weather provider (convenience)
+/// Weather provider (convenience) - dailyRec優先、なければプリフェッチ結果を使用
 final dailyWeatherProvider = Provider<Weather?>((ref) {
-  return ref.watch(dailyRecommendationProvider).dailyRec?.weather;
+  final state = ref.watch(dailyRecommendationProvider);
+  return state.dailyRec?.weather ?? state.prefetchedWeather;
 });
 
-/// TPO provider (convenience)
+/// TPO provider (convenience) - dailyRec優先、なければプリフェッチ結果を使用
 final dailyTpoProvider = Provider<TPO?>((ref) {
-  return ref.watch(dailyRecommendationProvider).dailyRec?.tpo;
+  final state = ref.watch(dailyRecommendationProvider);
+  return state.dailyRec?.tpo ?? state.prefetchedTpo;
 });
